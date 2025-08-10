@@ -1,0 +1,19 @@
+---
+import Base from '@layouts/Base.astro';
+import { pubs } from '@data/pubs';
+---
+<Base title="Publications — NP-Completing" description="Selected publications">
+  <h1 class="text-2xl font-semibold mb-6">Publications</h1>
+  <ul class="space-y-4">
+    {pubs.map((p) => (
+      <li class="leading-relaxed">
+        <div class="font-medium">{p.title}</div>
+        <div class="text-sm opacity-80">{p.authors}{p.venue ? `, ${p.venue}` : ''}{p.year ? ` (${p.year})` : ''}</div>
+        <div class="text-sm">
+          {p.link && (<a class="hover:underline mr-3" href={p.link}>Publisher</a>)}
+          {p.arxiv && (<a class="hover:underline" href={p.arxiv}>arXiv</a>)}
+        </div>
+      </li>
+    ))}
+  </ul>
+</Base>

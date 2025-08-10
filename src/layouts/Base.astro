@@ -1,0 +1,37 @@
+---
+import '../styles/global.css';
+const { title = 'NP-Completing', description = 'Notes, research, and projects', metaImage = '/favicon.svg' } = Astro.props;
+---
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <link rel="icon" href="/favicon.svg" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={metaImage} />
+    <title>{title}</title>
+  </head>
+  <body class="min-h-screen bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <header class="sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-slate-900/60 border-b border-slate-200/60 dark:border-slate-800">
+      <nav class="mx-auto max-w-5xl px-4 py-3 flex items-center gap-4">
+        <a href="/" class="font-semibold text-lg">NP-Completing</a>
+        <div class="ml-auto flex items-center gap-4 text-sm">
+          <a class="hover:underline" href="/blog">Blog</a>
+          <a class="hover:underline" href="/publications">Publications</a>
+          <a class="hover:underline" href="/about">About</a>
+        </div>
+      </nav>
+    </header>
+    <main class="mx-auto max-w-5xl px-4 py-10">
+      <slot />
+    </main>
+    <footer class="border-t border-slate-200/60 dark:border-slate-800">
+      <div class="mx-auto max-w-5xl px-4 py-6 text-sm opacity-80">
+        © {new Date().getFullYear()} NP-Completing — Built with Astro
+      </div>
+    </footer>
+  </body>
+</html>
