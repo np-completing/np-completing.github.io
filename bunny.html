@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>兔子音高机 · Bunny Pitch Machine</title>
+<meta name="description" content="打开麦克风，放点音乐，低音蹦出胖兔子，高音蹦出圆兔子。Open your mic, play music, and watch bunnies pop out by pitch.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23171633' stroke-width='5' stroke-linecap='round'%3E%3Cellipse cx='32' cy='44' rx='17' ry='14'/%3E%3Cpath d='M23 31 20 12M41 31 44 12'/%3E%3C/g%3E%3Ccircle cx='26' cy='42' r='2.5' fill='%23171633'/%3E%3Ccircle cx='38' cy='42' r='2.5' fill='%23171633'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#E9E7F0;
+    --ink:#171633;
+    --ink-soft:#5A5878;
+    --rule:#C9C6DA;
+    --display:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif;
+    --mono:"DM Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --cjk:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--paper);color:var(--ink);
+    font-family:var(--cjk);overflow:hidden;-webkit-font-smoothing:antialiased;
+  }
+  /* riso 纸纹 — 静态，不闪 */
+  body::after{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:99;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity:.13;mix-blend-mode:multiply;
+  }
+  .en{font-family:var(--mono);letter-spacing:.05em}
+
+  #app{height:100dvh;display:grid;grid-template-rows:auto auto 1fr auto}
+
+  /* ── 顶栏 ─────────────────────────────── */
+  header{
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    padding:13px 18px;border-bottom:1.5px solid var(--ink);position:relative;z-index:20;
+  }
+  .wordmark{font-family:var(--display);font-weight:800;font-size:20px;letter-spacing:-.03em;line-height:1;white-space:nowrap}
+  .wordmark small{
+    display:block;font-family:var(--mono);font-weight:400;font-size:9.5px;
+    letter-spacing:.17em;color:var(--ink-soft);margin-top:4px;text-transform:uppercase;
+  }
+  .wordmark .back{
+    display:block;font-family:var(--mono);font-weight:400;font-size:9.5px;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);
+    text-decoration:none;margin-bottom:6px;transition:color .15s;
+  }
+  .wordmark .back:hover{color:var(--ink)}
+  .wordmark .back:focus-visible{outline:3px solid #FF48B0;outline-offset:2px}
+  .controls{margin-left:auto;display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:flex-end}
+
+  button{font:inherit;color:inherit;cursor:pointer;border:1.5px solid var(--ink);background:transparent;border-radius:999px}
+  .btn{padding:8px 17px;font-size:14px;font-weight:600;white-space:nowrap;transition:background .12s,color .12s}
+  .btn .en{font-size:11px;opacity:.6;margin-left:7px;font-weight:400}
+  .btn:hover{background:var(--ink);color:var(--paper)}
+  .btn:focus-visible,summary:focus-visible,input:focus-visible{outline:3px solid #FF48B0;outline-offset:2px}
+  .btn.primary{background:var(--ink);color:var(--paper)}
+  .btn.primary:hover{background:#0F7DC2;border-color:#0F7DC2}
+  .btn.live{background:#FF48B0;border-color:#FF48B0;color:#fff}
+  .btn.ghost{padding:7px 13px;font-size:12.5px;font-weight:500}
+  .btn.ghost .en{font-size:10.5px;margin-left:5px}
+  .toggle{display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;user-select:none;white-space:nowrap}
+  .toggle input{accent-color:#0F7DC2;width:15px;height:15px;cursor:pointer}
+  .toggle .en,.slider .en{font-size:10.5px;color:var(--ink-soft)}
+  .slider{display:flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap}
+  .slider input{width:80px;accent-color:#FF6C2F}
+
+  details.notes{position:relative}
+  details.notes>summary{
+    list-style:none;padding:7px 13px;font-size:12.5px;font-weight:500;
+    border:1.5px solid var(--ink);border-radius:999px;cursor:pointer;white-space:nowrap;
+  }
+  details.notes>summary .en{font-size:10.5px;margin-left:5px;opacity:.6}
+  details.notes>summary::-webkit-details-marker{display:none}
+  details.notes[open]>summary{background:var(--ink);color:var(--paper)}
+  .notecard{
+    position:absolute;right:0;top:calc(100% + 10px);width:min(430px,86vw);
+    background:var(--paper);border:1.5px solid var(--ink);padding:18px 20px;
+    box-shadow:5px 5px 0 var(--ink);font-size:13.5px;line-height:1.7;z-index:40;
+    max-height:70vh;overflow:auto;
+  }
+  .notecard h3{font-family:var(--display);font-size:14px;margin:15px 0 5px;letter-spacing:-.01em}
+  .notecard h3:first-child{margin-top:0}
+  .notecard h3 .en{font-size:10.5px;font-weight:400;color:var(--ink-soft);margin-left:7px;text-transform:uppercase}
+  .notecard .eng{display:block;font-family:var(--mono);font-size:11.5px;line-height:1.65;color:var(--ink-soft);margin-top:3px}
+  .notecard code{font-family:var(--mono);font-size:12px;background:#fff;padding:1px 5px;border:1px solid var(--rule)}
+  .notecard kbd{font-family:var(--mono);font-size:11px;border:1.5px solid var(--ink);border-bottom-width:3px;border-radius:4px;padding:1px 6px;background:#fff}
+
+  /* ── 简介 · intro ─────────────────────── */
+  .intro{
+    display:flex;align-items:flex-start;gap:16px;
+    padding:11px 18px;border-bottom:1.5px solid var(--ink);
+    background:rgba(255,255,255,.34);
+  }
+  .intro .zh{font-size:13px;line-height:1.6;max-width:46ch}
+  .intro .rule{width:1.5px;align-self:stretch;background:var(--rule);flex:none}
+  .intro .eng{font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--ink-soft);max-width:56ch}
+
+  /* ── 舞台 ─────────────────────────────── */
+  main{display:flex;min-height:0;position:relative}
+
+  .ladder{width:122px;flex:none;border-right:1.5px solid var(--ink);display:flex;flex-direction:column-reverse;position:relative}
+  .rung{
+    flex:1;position:relative;border-top:1px dashed var(--rule);
+    padding:6px 9px;display:flex;flex-direction:column;justify-content:center;gap:1px;overflow:hidden;
+  }
+  .rung::before{content:"";position:absolute;inset:0;background:var(--c);opacity:0;transition:opacity .5s ease-out}
+  .rung.hit::before{opacity:.55;transition:opacity 0s}
+  .rung>*{position:relative}
+  .rung .n{font-family:var(--display);font-weight:800;font-size:15px;line-height:1;margin-bottom:2px}
+  .rung .lab{font-size:11.5px;line-height:1.25;font-weight:600}
+  .rung .eng{font-family:var(--mono);font-size:8.5px;letter-spacing:.09em;text-transform:uppercase;line-height:1.3}
+  .rung .hz{font-family:var(--mono);font-size:9.5px;color:var(--ink-soft);letter-spacing:.02em;margin-top:2px}
+  .rung .swatch{position:absolute;right:8px;top:8px;width:11px;height:11px;border-radius:50%;background:var(--c);border:1.2px solid var(--ink)}
+
+  #needle{position:absolute;right:-1px;width:26px;height:0;pointer-events:none;transition:bottom .07s linear;opacity:0}
+  #needle::after{content:"";position:absolute;right:0;top:-7px;border:7px solid transparent;border-right-color:var(--ink);border-left:0}
+  #needle.on{opacity:1}
+
+  #stage{flex:1;min-width:0;position:relative}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+
+  .overlay{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;text-align:center;padding:24px;pointer-events:none}
+  .overlay.hidden{display:none}
+  .overlay .big{font-family:var(--display);font-weight:800;font-size:clamp(26px,4.6vw,44px);letter-spacing:-.035em;line-height:1.06}
+  .overlay .bigen{font-family:var(--mono);font-size:clamp(11px,1.5vw,14px);letter-spacing:.13em;text-transform:uppercase;color:var(--ink-soft)}
+  .overlay p{max-width:36ch;font-size:14.5px;line-height:1.75;color:var(--ink-soft)}
+  .overlay p .eng{display:block;font-family:var(--mono);font-size:12px;margin-top:4px}
+  .overlay .keys{font-family:var(--mono);font-size:12px;color:var(--ink-soft)}
+  .overlay.err .big{color:#FF6C2F}
+  .overlay.err p{color:var(--ink)}
+
+  /* ── 状态栏 ───────────────────────────── */
+  footer{
+    border-top:1.5px solid var(--ink);padding:9px 18px;
+    display:flex;align-items:center;gap:8px 20px;flex-wrap:wrap;
+    font-family:var(--mono);font-size:12.5px;color:var(--ink-soft);
+  }
+  footer .k{font-family:var(--cjk);font-size:12px}
+  footer .ke{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;margin:0 6px 0 3px}
+  footer b{color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--rule);flex:none}
+  .dot.on{background:#FF48B0}
+  .spacer{margin-left:auto}
+
+  @media (max-width:760px){
+    header{padding:11px 13px;gap:9px}
+    .wordmark{font-size:16px}
+    .controls{gap:7px}
+    .ladder{width:84px}
+    .rung{padding:5px 7px}
+    .rung .hz,.rung .swatch{display:none}
+    .rung .lab{font-size:10.5px}
+    .rung .eng{font-size:7.5px}
+    .slider input{width:56px}
+    .intro{flex-direction:column;gap:5px;padding:10px 13px}
+    .intro .rule{display:none}
+    .intro .zh{font-size:12.5px}
+    .intro .eng{font-size:11px}
+    footer{padding:8px 13px;gap:6px 14px;font-size:11.5px}
+  }
+  /* 横屏手机等矮视口：让出高度给舞台 · give the height back to the stage */
+  @media (max-height:560px){ .intro{display:none} }
+  @media (prefers-reduced-motion:reduce){ *{transition-duration:.01ms !important} }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="wordmark">
+      <a class="back" href="index.html">← np completing</a>
+      兔子音高机<small>Bunny Pitch Machine</small>
+    </div>
+    <div class="controls">
+      <label class="slider" title="越靠右越容易蹦兔子 · higher = spawns more easily">灵敏<span class="en">sens</span><input id="sens" type="range" min="0" max="100" value="58"></label>
+      <label class="toggle"><input id="grav" type="checkbox" checked>重力<span class="en">gravity</span></label>
+      <button class="btn ghost" id="clear">清空<span class="en">Clear</span></button>
+      <details class="notes"><summary>说明<span class="en">About</span></summary>
+        <div class="notecard">
+          <h3>怎么玩<span class="en">How to play</span></h3>
+          点「开始聆听」，允许麦克风，然后放音乐。低音蹦出又胖又大的兔子，高音蹦出小小圆圆的兔子，最多同时 10 只，满了就挤掉最老的那只。
+          <span class="eng">Hit Listen, allow the mic, then play music. Low notes make big chubby bunnies, high notes make tiny round ones. Ten at a time — the oldest gets bumped.</span>
+          <h3>不用麦克风也行<span class="en">No mic needed</span></h3>
+          按 <kbd>1</kbd>–<kbd>5</kbd> 手动放一只对应音区的兔子，或者直接点画面。
+          <span class="eng">Press 1–5 to drop a bunny from that band by hand, or just click the stage.</span>
+          <h3>听不到声音？<span class="en">Hearing nothing?</span></h3>
+          用外放而不是耳机，音量开大一点。代码里已经关掉了 <code>echoCancellation</code>，否则浏览器会把你自己音箱的声音当回声消掉。
+          <span class="eng">Use speakers, not headphones, and turn it up. <code>echoCancellation</code> is off in the code — otherwise the browser cancels your own speakers as echo.</span>
+          <h3>关于「音高」<span class="en">On pitch</span></h3>
+          背景音乐是复音的，真正的 F0 检测不可靠，所以这里用的是加权频谱峰值（带 +6 dB/oct tilt 抵消音乐的低频滚降），实际反映的是主导音区。
+          <span class="eng">Music is polyphonic, so true F0 detection is unreliable. This reads the weighted spectral peak with a +6 dB/oct tilt — it tracks the dominant register rather than a single fundamental.</span>
+        </div>
+      </details>
+      <button class="btn primary" id="mic">开始聆听<span class="en">Listen</span></button>
+    </div>
+  </header>
+
+  <div class="intro">
+    <p class="zh">用麦克风听环境里的音乐，按主导音区分成五档：音越低，蹦出来的兔子越胖越大；音越高，越小越圆。同时最多十只。</p>
+    <span class="rule"></span>
+    <p class="eng">Listens through your mic and sorts what it hears into five registers — low notes make big chubby bunnies, high notes make small round ones. Ten on stage at a time.</p>
+  </div>
+
+  <main>
+    <div class="ladder" id="ladder"><div id="needle"></div></div>
+    <div id="stage">
+      <canvas id="cv"></canvas>
+      <div class="overlay" id="overlay">
+        <div class="big">放点音乐，<br>兔子自己会来。</div>
+        <div class="bigen">Play music. The bunnies show up on their own.</div>
+        <p>点右上角「开始聆听」，允许麦克风，然后用外放放一首歌。
+          <span class="eng">Hit Listen, allow the mic, then play a song out loud.</span></p>
+        <div class="keys">或按 1–5 手动放一只 · or press 1–5 to drop one</div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <span class="dot" id="dot"></span>
+    <span><span class="k">音高</span><span class="ke">pitch</span><b id="fOut">—</b></span>
+    <span><span class="k">音符</span><span class="ke">note</span><b id="nOut">—</b></span>
+    <span><span class="k">音区</span><span class="ke">band</span><b id="bOut">—</b></span>
+    <span class="spacer"><span class="k">场上</span><span class="ke">on stage</span><b id="cOut">0</b> / 10</span>
+  </footer>
+
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ══════════════════════════════════════════
+   1. 五个音区 · the five pitch bands
+   ══════════════════════════════════════════ */
+const BANDS = [
+  { lab:'又胖又大', en:'Big & chubby', lo:  0, hi: 150, col:'#0F7DC2', size:1.00, fat:1.52 },
+  { lab:'胖乎乎',   en:'Chubby',      lo:150, hi: 300, col:'#00A95C', size:0.80, fat:1.34 },
+  { lab:'中等',     en:'Medium',      lo:300, hi: 600, col:'#E8B400', size:0.62, fat:1.18 },
+  { lab:'小只',     en:'Small',       lo:600, hi:1200, col:'#FF6C2F', size:0.48, fat:1.06 },
+  { lab:'小小圆圆', en:'Tiny & round',lo:1200,hi:1/0,  col:'#FF48B0', size:0.36, fat:1.00 },
+];
+const MAX_BUNNIES = 10;
+const F_MIN = 70, F_MAX = 2500;   // 峰值搜索范围 · peak search range
+const TILT  = 6;                  // dB/octave，抵消音乐天然的低频滚降
+const GRAV  = 1500;               // px/s²
+
+const bandOf = f => { for (let i=0;i<5;i++) if (f < BANDS[i].hi) return i; return 4; };
+const rnd   = (a,b) => a + Math.random()*(b-a);
+const clamp = (v,a,b) => v < a ? a : v > b ? b : v;
+const coin  = () => Math.random() < 0.5 ? -1 : 1;
+
+/* ══════════════════════════════════════════
+   2. 音高梯 · pitch ladder
+   ══════════════════════════════════════════ */
+const ladder = document.getElementById('ladder');
+const needle = document.getElementById('needle');
+const rungs  = BANDS.map((b,i) => {
+  const d = document.createElement('div');
+  d.className = 'rung';
+  d.style.setProperty('--c', b.col);
+  d.innerHTML = `<span class="swatch"></span>
+    <span class="n">${i+1}</span>
+    <span class="lab">${b.lab}</span>
+    <span class="eng">${b.en}</span>
+    <span class="hz">${b.lo}${isFinite(b.hi)?'–'+b.hi:'+'} Hz</span>`;
+  ladder.appendChild(d);
+  return d;
+});
+const flash = i => { rungs[i].classList.remove('hit'); void rungs[i].offsetWidth; rungs[i].classList.add('hit'); };
+
+/* ══════════════════════════════════════════
+   3. 画布 · canvas
+   ══════════════════════════════════════════ */
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let W = 0, H = 0, unit = 62;
+
+function resize(){
+  const r = cv.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2);
+  W = r.width; H = r.height;
+  cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  unit = Math.max(28, Math.min(64, Math.min(W,H)/9.5));
+  for (const b of bunnies){ b.apex = clamp(b.apexFrac*H, unit, H); }
+}
+new ResizeObserver(resize).observe(cv);
+
+/* ══════════════════════════════════════════
+   4. 兔子 · bunnies
+   ══════════════════════════════════════════ */
+const bunnies = [];
+
+function spawn(bi, energy = 0.6){
+  const B = BANDS[bi];
+  const R = unit * B.size;
+  const halfW = R*B.fat, halfH = R*1.62;
+
+  // 出生高度仍由音高决定，但横向铺开整幅画面
+  // born at the height of its pitch, but anywhere across the width
+  const t = (bi + 0.5)/5;
+  const y = clamp(H - t*H + rnd(-H*0.06, H*0.06), halfH+2, H-halfH-2);
+  const x = W > halfW*2+8 ? rnd(halfW+3, W-halfW-3) : W/2;
+
+  // 22°–68° 的对角线，避开退化成纯竖直/纯水平的来回
+  // diagonal launch, never degenerate into a pure vertical or horizontal loop
+  const a   = rnd(22, 68) * Math.PI/180;
+  const spd = rnd(320, 620) * (0.75 + energy*0.5);
+  const apexFrac = rnd(0.40, 0.92);
+
+  bunnies.push({
+    bi, R, halfW, halfH, col:B.col, fat:B.fat,
+    x, y,
+    vx: coin()*Math.cos(a)*spd,
+    vy: coin()*Math.sin(a)*spd,
+    speed0: spd,
+    hSpeed: Math.cos(a)*spd,                 // 目标横向速度 · target horizontal speed
+    apexFrac, apex: clamp(apexFrac*H, unit, H),
+    rot: rnd(-0.2,0.2), vr: rnd(-2.2,2.2),
+    sq: 1, life: 0, dying: 0,
+  });
+
+  while (bunnies.filter(b => !b.dying).length > MAX_BUNNIES){
+    const old = bunnies.find(b => !b.dying);
+    if (old) old.dying = 1e-6; else break;
+  }
+  flash(bi);
+  overlay.classList.add('hidden');
+}
+
+const easeOutBack = t => 1 + 2.2*Math.pow(t-1,3) + 1.7*Math.pow(t-1,2);
+
+function step(dt){
+  const g = gravOn.checked ? GRAV : 0;
+
+  for (let i = bunnies.length-1; i >= 0; i--){
+    const b = bunnies[i];
+
+    if (b.dying){ b.dying += dt/0.28; if (b.dying >= 1){ bunnies.splice(i,1); continue; } }
+    else if (b.life < 1) b.life = Math.min(1, b.life + dt/0.26);
+
+    b.vy += g*dt;
+    b.x  += b.vx*dt;
+    b.y  += b.vy*dt;
+    b.rot += b.vr*dt;
+    b.vr  *= Math.pow(0.5, dt);
+    b.sq  += (1 - b.sq) * Math.min(1, dt*11);
+
+    let hit = 0;
+    // 侧墙：完全弹性，横向能量一点不掉 · side walls are perfectly elastic
+    if (b.x < b.halfW)     { b.x = b.halfW;     b.vx =  Math.abs(b.vx); hit = 1; }
+    if (b.x > W - b.halfW) { b.x = W - b.halfW; b.vx = -Math.abs(b.vx); hit = 1; }
+    if (b.y < b.halfH)     { b.y = b.halfH;     b.vy =  Math.abs(b.vy); hit = 2; }
+    if (b.y > H - b.halfH) {
+      b.y = H - b.halfH;
+      // 按目标高度反算出射速度，永远弹回同一高度
+      // solve outgoing speed from the target apex — bounces back to the same height forever
+      b.vy = g ? -Math.sqrt(2*g*b.apex) : -Math.abs(b.vy);
+      hit = 2;
+    }
+
+    if (hit){
+      const s = Math.sign(b.vx) || coin();
+      if (g){
+        // 横向速度钳在目标附近，不衰减也不失控
+        b.vx = s * clamp(Math.abs(b.vx)*rnd(0.94,1.10), Math.abs(b.hSpeed)*0.65, Math.abs(b.hSpeed)*1.7);
+      } else {
+        // 无重力：台球模式，总速恒定 + ±8° 扰动让轨迹去相关
+        const sp = Math.hypot(b.vx, b.vy) || 1;
+        const th = Math.atan2(b.vy, b.vx) + rnd(-0.14, 0.14);
+        b.vx = Math.cos(th)*b.speed0;
+        b.vy = Math.sin(th)*b.speed0;
+      }
+      b.sq = hit === 2 ? 0.78 : 1.2;
+      b.vr += rnd(-3,3);
+    }
+  }
+  cOut.textContent = bunnies.filter(b => !b.dying).length;
+}
+
+/* —— 简笔画兔子 · the doodle bunny —— */
+function drawBunny(b){
+  const grow = b.dying ? 1 - b.dying : easeOutBack(b.life);
+  if (grow <= 0) return;
+  const R = b.R * grow;
+
+  ctx.save();
+  ctx.translate(b.x, b.y);
+  ctx.rotate(b.rot);
+  ctx.scale(b.sq, 1/b.sq);
+
+  const lw = Math.max(2, R*0.10);
+  ctx.lineWidth = lw; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+
+  const bw = R*b.fat, bh = R;
+  const er = R*0.20, eh = R*0.86, ey = -bh*0.98;
+
+  const ears = paint => {
+    for (const s of [-1, 1]){
+      ctx.save();
+      ctx.translate(s*bw*0.40, ey);
+      ctx.rotate(s*0.20);
+      ctx.beginPath(); ctx.ellipse(0, -eh*0.55, er, eh*0.72, 0, 0, 7); paint();
+      ctx.restore();
+    }
+  };
+
+  // 套印错位 · risograph misregistration
+  ctx.save();
+  ctx.translate(-lw*0.75, lw*0.9);
+  ctx.fillStyle = b.col;
+  ctx.globalAlpha = (b.dying ? 1-b.dying : 1) * 0.72;
+  ctx.globalCompositeOperation = 'multiply';
+  ears(() => ctx.fill());
+  ctx.beginPath(); ctx.ellipse(0, 0, bw, bh, 0, 0, 7); ctx.fill();
+  ctx.restore();
+
+  // 墨线 · ink pass
+  ctx.globalAlpha = b.dying ? 1-b.dying : 1;
+  ctx.strokeStyle = '#171633';
+  ctx.fillStyle   = '#171633';
+
+  ears(() => ctx.stroke());
+  ctx.beginPath(); ctx.ellipse(0, 0, bw, bh, 0, 0, 7); ctx.stroke();
+
+  for (const s of [-1, 1]){
+    ctx.beginPath();
+    ctx.ellipse(s*bw*0.46, bh*0.86, R*0.24, R*0.14, s*0.25, 0, 7);
+    ctx.stroke();
+  }
+
+  const exx = bw*0.34, eyy = -bh*0.10, er2 = Math.max(1.6, R*0.088);
+  ctx.beginPath(); ctx.arc(-exx, eyy, er2, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.arc( exx, eyy, er2, 0, 7); ctx.fill();
+
+  const ny = bh*0.16;
+  ctx.beginPath();
+  ctx.moveTo(-R*0.11, ny); ctx.lineTo(R*0.11, ny); ctx.lineTo(0, ny + R*0.13);
+  ctx.closePath(); ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(-R*0.20, ny + R*0.30);
+  ctx.quadraticCurveTo(-R*0.10, ny + R*0.42, 0, ny + R*0.16);
+  ctx.quadraticCurveTo( R*0.10, ny + R*0.42, R*0.20, ny + R*0.30);
+  ctx.stroke();
+
+  ctx.lineWidth = lw*0.62;
+  for (const s of [-1, 1]) for (let k = -1; k <= 1; k++){
+    ctx.beginPath();
+    ctx.moveTo(s*R*0.22, ny + R*0.05);
+    ctx.lineTo(s*bw*0.96, ny + R*0.05 + k*R*0.26);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/* ══════════════════════════════════════════
+   5. 主循环 · main loop
+   ══════════════════════════════════════════ */
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(0.034, (now - last)/1000);
+  last = now;
+  if (running) listen();
+  step(dt);
+  ctx.clearRect(0, 0, W, H);
+  for (const b of bunnies) drawBunny(b);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ══════════════════════════════════════════
+   6. 听 · listening
+   ══════════════════════════════════════════ */
+const micBtn  = document.getElementById('mic');
+const overlay = document.getElementById('overlay');
+const gravOn  = document.getElementById('grav');
+const sens    = document.getElementById('sens');
+const dot     = document.getElementById('dot');
+const fOut = document.getElementById('fOut'), nOut = document.getElementById('nOut');
+const bOut = document.getElementById('bOut'), cOut = document.getElementById('cOut');
+
+let ac = null, an = null, stream = null, running = false;
+let spec = null, prev = null, fluxAvg = 0, lastSpawn = 0;
+
+async function start(){
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: false,   // ← 关键：否则浏览器会消掉你音箱的声音
+        noiseSuppression: false,   //    otherwise the browser cancels your own speakers
+        autoGainControl:  false,
+      }
+    });
+  } catch (e){
+    return fail(e.name === 'NotAllowedError'
+      ? ['麦克风被拒绝了', 'Microphone blocked',
+         '到地址栏左边的图标里把麦克风改成「允许」，再点一次开始聆听。如果页面嵌在 iframe 里，直接在新标签页打开。',
+         'Open the icon at the left of the address bar, set Microphone to Allow, then hit Listen again. If this page is inside an iframe, open it in its own tab.']
+      : ['打不开麦克风', 'No input device',
+         '没有找到可用的输入设备，或者被别的程序占用了。检查一下系统的麦克风设置。',
+         'No usable input was found, or another app is holding it. Check your system microphone settings.']);
+  }
+
+  ac = new (window.AudioContext || window.webkitAudioContext)();
+  await ac.resume();
+  an = ac.createAnalyser();
+  an.fftSize = 8192;
+  an.smoothingTimeConstant = 0.35;
+  an.minDecibels = -95;
+  an.maxDecibels = -12;
+  ac.createMediaStreamSource(stream).connect(an);
+
+  spec = new Float32Array(an.frequencyBinCount);
+  prev = new Float32Array(an.frequencyBinCount);
+  fluxAvg = 0;
+
+  running = true;
+  micBtn.innerHTML = '停止<span class="en">Stop</span>';
+  micBtn.classList.add('live');
+  dot.classList.add('on');
+  overlay.classList.add('hidden');
+}
+
+function stop(){
+  running = false;
+  stream?.getTracks().forEach(t => t.stop());
+  ac?.close(); ac = null; an = null; stream = null;
+  micBtn.innerHTML = '开始聆听<span class="en">Listen</span>';
+  micBtn.classList.remove('live');
+  dot.classList.remove('on');
+  needle.classList.remove('on');
+  fOut.textContent = nOut.textContent = bOut.textContent = '—';
+}
+
+function fail(m){
+  overlay.className = 'overlay err';
+  overlay.innerHTML =
+    `<div class="big">${m[0]}</div><div class="bigen">${m[1]}</div>
+     <p>${m[2]}<span class="eng">${m[3]}</span></p>
+     <div class="keys">按 1–5 也能手动放兔子 · press 1–5 to drop bunnies by hand</div>`;
+}
+
+const NOTES = ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+const noteName = f => {
+  const n = Math.round(12*Math.log2(f/440)) + 69;
+  return NOTES[((n%12)+12)%12] + (Math.floor(n/12) - 1);
+};
+
+function listen(){
+  an.getFloatFrequencyData(spec);
+  const N = spec.length, binHz = ac.sampleRate/2/N;
+  const i0 = Math.max(1, Math.floor(F_MIN/binHz)), i1 = Math.min(N-2, Math.ceil(F_MAX/binHz));
+
+  // spectral flux（对数域）：比 RMS 更能抓到打击和高频起音
+  let flux = 0, loud = 0;
+  for (let i = i0; i <= i1; i++){
+    const d = Math.max(spec[i], -100);
+    flux += Math.max(0, d - prev[i]);
+    loud += d + 100;
+    prev[i] = d;
+  }
+  loud /= (i1 - i0 + 1) * 100;
+  fluxAvg = fluxAvg*0.93 + flux*0.07;
+
+  // 加权峰值：+TILT dB/oct 抵消音乐天然的低频滚降
+  let best = -1e9, bi = -1;
+  for (let i = i0; i <= i1; i++){
+    const s = Math.max(spec[i], -100) + TILT*Math.log2((i*binHz)/F_MIN);
+    if (s > best){ best = s; bi = i; }
+  }
+  if (bi < 1 || loud < 0.05){ needle.classList.remove('on'); return; }
+
+  // 抛物线插值取亚 bin 精度 · parabolic interpolation for sub-bin accuracy
+  const a = Math.max(spec[bi-1],-100), b = Math.max(spec[bi],-100), c = Math.max(spec[bi+1],-100);
+  const den = a - 2*b + c;
+  const f = (bi + (den ? 0.5*(a-c)/den : 0)) * binHz;
+  if (!(f > F_MIN && f < F_MAX)) return;
+
+  const band = bandOf(f);
+  fOut.textContent = Math.round(f) + ' Hz';
+  nOut.textContent = noteName(f);
+  bOut.textContent = (band+1) + ' · ' + BANDS[band].lab;
+
+  needle.style.bottom = (Math.log2(f/F_MIN)/Math.log2(F_MAX/F_MIN)*100).toFixed(1) + '%';
+  needle.classList.add('on');
+
+  // 起音判定 · onset
+  const k = 2.35 - (sens.value/100)*1.15;   // 1.20 灵敏 … 2.35 迟钝
+  const now = performance.now(), quiet = now - lastSpawn;
+  if ((flux > fluxAvg*k && flux > 6 && quiet > 170) || (quiet > 1300 && loud > 0.14)){
+    lastSpawn = now;
+    spawn(band, Math.min(1, loud*2.6));
+  }
+}
+
+/* ══════════════════════════════════════════
+   7. 交互 · controls
+   ══════════════════════════════════════════ */
+micBtn.onclick = () => running ? stop() : start();
+document.getElementById('clear').onclick = () => { for (const b of bunnies) b.dying ||= 1e-6; };
+gravOn.onchange = () => {
+  // 切模式时立刻把速度拉回合理范围 · re-normalise speeds on mode switch
+  for (const b of bunnies){
+    const sp = Math.hypot(b.vx, b.vy) || 1;
+    b.vx = b.vx/sp*b.speed0; b.vy = b.vy/sp*b.speed0;
+  }
+};
+
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  const n = '12345'.indexOf(e.key);
+  if (n >= 0){ e.preventDefault(); spawn(n, 0.75); }
+});
+document.getElementById('stage').addEventListener('pointerdown', () => {
+  if (!running) spawn(Math.floor(rnd(0,5)), 0.75);
+});
+
+if (!navigator.mediaDevices?.getUserMedia){
+  fail(['这个浏览器不支持麦克风', 'Microphone unavailable',
+        '需要 https 或 localhost。GitHub Pages 本身是 https，线上没问题；本地测试请用本地服务器打开，不要直接双击文件。',
+        'A secure context is required. GitHub Pages is https so the live site is fine — for local testing, serve the folder instead of opening the file directly.']);
+}
+})();
+</script>
+</body>
+</html>
