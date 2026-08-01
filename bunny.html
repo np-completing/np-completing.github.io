@@ -328,6 +328,12 @@ const MAX_BUNNIES = 10;
 const F_MIN = 70, F_MAX = 2500;   // 峰值搜索范围 · peak search range
 const TILT  = 6;                  // dB/octave，抵消音乐天然的低频滚降
 const GRAV  = 1500;               // px/s²
+// 全局快慢，只调这一个数：线速度和角速度 ×TEMPO，重力 ×TEMPO²
+// 这是严格的时间重标定——轨迹形状、弹跳高度、页面覆盖都不变，只是整体放慢。
+// 调小 = 更慢更好看清；1.0 = 原速。
+// One knob for overall pace: velocities ×TEMPO, gravity ×TEMPO².
+// A pure time rescaling — trajectory shape, apex height and coverage all unchanged.
+const TEMPO = 0.78;
 
 const bandOf = f => { for (let i=0;i<NB;i++) if (f < BANDS[i].hi) return i; return NB-1; };
 const rnd   = (a,b) => a + Math.random()*(b-a);
@@ -403,19 +409,19 @@ function spawn(bi, energy = 0.6){
   // 22°–68° 的对角线，避开退化成纯竖直/纯水平的来回
   // diagonal launch, never degenerate into a pure vertical or horizontal loop
   const a   = rnd(22, 68) * Math.PI/180;
-  const spd = rnd(320, 620) * (0.75 + energy*0.5) * B.spd;
+  const spd = rnd(320, 620) * (0.75 + energy*0.5) * B.spd * TEMPO;
   const apexFrac = rnd(0.40, 0.92);
 
   bunnies.push({
     bi, R, halfW, halfH, col:B.col, fat:B.fat,
-    g: GRAV * B.spd * B.spd,                 // 等效重力 ∝ 倍率² · gravity scales as factor²
+    g: GRAV * B.spd * B.spd * TEMPO * TEMPO, // 等效重力 ∝ 倍率² · gravity scales as factor²
     x, y,
     vx: coin()*Math.cos(a)*spd,
     vy: coin()*Math.sin(a)*spd,
     speed0: spd,
     hSpeed: Math.cos(a)*spd,                 // 目标横向速度 · target horizontal speed
     apexFrac, apex: clamp(apexFrac*H, unit, H),
-    rot: rnd(-0.2,0.2), vr: rnd(-2.2,2.2),
+    rot: rnd(-0.2,0.2), vr: rnd(-2.2,2.2)*TEMPO,
     sq: 1, life: 0, dying: 0,
   });
 
@@ -472,7 +478,7 @@ function step(dt){
         b.vy = Math.sin(th)*b.speed0;
       }
       b.sq = hit === 2 ? 0.78 : 1.2;
-      b.vr += rnd(-3,3);
+      b.vr += rnd(-3,3)*TEMPO;   // 自转也放慢——旋转是眼花的另一半来源
     }
   }
   cOut.textContent = bunnies.filter(b => !b.dying).length;
