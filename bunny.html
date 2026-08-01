@@ -130,6 +130,47 @@
   #stage{flex:1;min-width:0;position:relative}
   canvas{display:block;width:100%;height:100%;touch-action:none}
 
+  /* ── 总结面板 · summary sheet ─────────── */
+  .sheet{position:absolute;inset:0;z-index:30;display:flex;align-items:flex-start;
+    justify-content:center;padding:18px;overflow:auto;background:rgba(233,231,240,.82)}
+  .sheet[hidden]{display:none}
+  .sheetcard{width:min(620px,100%);background:var(--paper);border:1.5px solid var(--ink);
+    box-shadow:5px 5px 0 var(--ink);padding:18px 20px 20px}
+  .sheethead{display:flex;align-items:center;gap:14px;margin-bottom:4px}
+  .sheethead h2{font-family:var(--display);font-weight:800;font-size:17px;letter-spacing:-.02em}
+  .sheethead .en{font-family:var(--mono);font-size:10px;font-weight:400;color:var(--ink-soft);
+    margin-left:8px;letter-spacing:.1em;text-transform:uppercase}
+  .sheethead button{margin-left:auto}
+  .sheetmeta{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.02em}
+  .chart{position:relative;display:flex;align-items:flex-end;gap:1px;height:132px;
+    margin-top:16px;border-bottom:1.5px solid var(--ink)}
+  .chart b{flex:1;min-height:1px;background:var(--c);border-radius:1.5px 1.5px 0 0}
+  .chart i{position:absolute;top:0;bottom:0;width:1px;background:var(--ink);opacity:.45}
+  .axis{position:relative;height:15px}
+  .axis span{position:absolute;top:3px;transform:translateX(-50%);font-family:var(--mono);
+    font-size:8.5px;color:var(--ink-soft)}
+  .sumtab{margin-top:14px;border-top:1px solid var(--rule)}
+  .sumrow{display:flex;align-items:center;gap:9px;padding:5px 0;border-bottom:1px solid var(--rule);
+    font-family:var(--mono);font-size:11px;font-variant-numeric:tabular-nums}
+  .sumrow s{width:9px;height:9px;border-radius:50%;background:var(--c);flex:none}
+  .sumrow .nm{font-family:var(--cjk);font-size:11.5px;width:62px;flex:none}
+  .sumrow .rg{width:82px;flex:none;color:var(--ink-soft)}
+  .sumrow .bar{flex:1;height:7px;background:var(--rule);position:relative;border-radius:99px;overflow:hidden}
+  .sumrow .bar u{position:absolute;left:0;top:0;bottom:0;background:var(--c)}
+  .sumrow .pc{width:38px;text-align:right;flex:none}
+  .sumrow .ct{width:44px;text-align:right;flex:none;color:var(--ink-soft)}
+  .suggest{margin-top:15px;padding:12px 14px;border:1.5px solid var(--ink);font-size:12.5px;line-height:1.65}
+  .suggest .en{display:block;font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);margin-top:2px}
+  .suggest code{font-family:var(--mono);font-size:12.5px;background:#fff;border:1px solid var(--rule);
+    padding:2px 7px;display:inline-block;margin-top:7px;letter-spacing:.03em}
+  @media (max-width:760px){
+    .sheet{padding:10px}
+    .sheetcard{padding:14px 14px 16px}
+    .sumrow .nm{width:52px;font-size:10.5px}
+    .sumrow .rg{width:66px;font-size:10px}
+    .sumrow .ct{display:none}
+  }
+
   .overlay{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;text-align:center;padding:24px;pointer-events:none}
   .overlay.hidden{display:none}
   .overlay .big{font-family:var(--display);font-weight:800;font-size:clamp(26px,4.6vw,44px);letter-spacing:-.035em;line-height:1.06}
@@ -150,6 +191,10 @@
   footer .ke{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;margin:0 6px 0 3px}
   footer b{color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums}
   .dot{width:8px;height:8px;border-radius:50%;background:var(--rule);flex:none}
+  .meter{position:relative;width:52px;height:6px;border:1px solid var(--rule);border-radius:99px;overflow:hidden;flex:none}
+  .meter i{position:absolute;left:0;top:0;bottom:0;width:0;background:#FF48B0;transition:width .07s linear}
+  .aec{color:#FF6C2F;font-size:11.5px;font-family:var(--cjk)}
+  .aec .ke{color:#FF6C2F;opacity:.75}
   .dot.on{background:#FF48B0}
   .spacer{margin-left:auto}
 
@@ -186,6 +231,7 @@
     <div class="controls">
       <label class="slider" title="越靠右越容易蹦兔子 · higher = spawns more easily">灵敏<span class="en">sens</span><input id="sens" type="range" min="0" max="100" value="58"></label>
       <label class="toggle"><input id="grav" type="checkbox" checked>重力<span class="en">gravity</span></label>
+      <button class="btn ghost" id="sumOpen">总结<span class="en">Summary</span></button>
       <button class="btn ghost" id="clear">清空<span class="en">Clear</span></button>
       <details class="notes"><summary>说明<span class="en">About</span></summary>
         <div class="notecard">
@@ -196,8 +242,11 @@
           按 <kbd>1</kbd>–<kbd>7</kbd> 手动放一只对应音区的兔子，或者直接点画面。
           <span class="eng">Press 1–7 to drop a bunny from that band by hand, or just click the stage.</span>
           <h3>听不到声音？<span class="en">Hearing nothing?</span></h3>
-          用外放而不是耳机，音量开大一点。代码里已经关掉了 <code>echoCancellation</code>，否则浏览器会把你自己音箱的声音当回声消掉。
-          <span class="eng">Use speakers, not headphones, and turn it up. <code>echoCancellation</code> is off in the code — otherwise the browser cancels your own speakers as echo.</span>
+          先看状态栏那条粉色电平条：一直是空的说明麦克风没数据；有跳动但兔子不出来，就把「灵敏」往右拉。用外放而不是耳机，音量开大一点。
+          <span class="eng">Watch the pink level bar in the status strip. Flat means no signal at all; moving but no bunnies means you should raise Sens. Use speakers, not headphones.</span>
+          <h3>iPhone 上收不到<span class="en">On iPhone</span></h3>
+          iOS Safari 会无视 <code>echoCancellation: false</code>，把回声消除和降噪焊死在采集链路里，而且开麦后输出会从扬声器改路由到听筒。所以<b>同一台 iPhone 外放的音乐会被当成自己的回声消掉</b>——状态栏出现橙色「系统强制回声消除」就是这个情况。<b>用另一台设备放音乐</b>，iPhone 只负责听，就正常了。另外一定要用 Safari 本体打开，微信等 App 内置浏览器通常不给麦克风权限。
+          <span class="eng">iOS Safari ignores <code>echoCancellation: false</code> — the voice-processing unit is baked into the capture path — and routes output to the earpiece once the mic opens. Music played from the same iPhone gets cancelled as its own echo. Play it from a second device and let the phone listen. Open in Safari itself; in-app browsers usually block the mic.</span>
           <h3>关于「音高」<span class="en">On pitch</span></h3>
           背景音乐是复音的，真正的 F0 检测不可靠，所以这里用的是加权频谱峰值（带 +6 dB/oct tilt 抵消音乐的低频滚降），实际反映的是主导音区。
           <span class="eng">Music is polyphonic, so true F0 detection is unreliable. This reads the weighted spectral peak with a +6 dB/oct tilt — it tracks the dominant register rather than a single fundamental.</span>
@@ -217,6 +266,19 @@
     <div class="ladder" id="ladder"><div id="needle"></div></div>
     <div id="stage">
       <canvas id="cv"></canvas>
+      <div class="sheet" id="summary" hidden>
+        <div class="sheetcard">
+          <div class="sheethead">
+            <h2>音高分布<span class="en">Pitch distribution</span></h2>
+            <button class="btn ghost" id="sumClose">关闭<span class="en">Close</span></button>
+          </div>
+          <p class="sheetmeta" id="sumMeta"></p>
+          <div class="chart" id="sumChart"></div>
+          <div class="axis" id="sumAxis"></div>
+          <div class="sumtab" id="sumTable"></div>
+          <div class="suggest" id="sumSuggest"></div>
+        </div>
+      </div>
       <div class="overlay" id="overlay">
         <div class="big">放点音乐，<br>兔子自己会来。</div>
         <div class="bigen">Play music. The bunnies show up on their own.</div>
@@ -229,6 +291,8 @@
 
   <footer>
     <span class="dot" id="dot"></span>
+    <span class="meter" aria-hidden="true"><i id="meterFill"></i></span>
+    <span class="aec" id="aecWarn" hidden>系统强制回声消除<span class="ke">aec forced on</span></span>
     <span><span class="k">音高</span><span class="ke">pitch</span><b id="fOut">—</b></span>
     <span><span class="k">音符</span><span class="ke">note</span><b id="nOut">—</b></span>
     <span><span class="k">音区</span><span class="ke">band</span><b id="bOut">—</b></span>
@@ -288,6 +352,17 @@ const rungs  = BANDS.map((b,i) => {
   return d;
 });
 const tally = new Array(NB).fill(0);
+
+// 直方图：1/12 倍频程一格（正好一个半音），F_MIN–F_MAX 共 62 格
+// Histogram at one bin per semitone across the search range.
+const HB = 62;
+const hist       = new Float64Array(HB);   // 每帧检测到的主导频率 · per-frame dominant peak
+const spawnBins  = new Float64Array(HB);   // 真正蹦出兔子的那一刻 · at spawn time
+const bandFrames = new Array(NB).fill(0);
+let listenSec = 0;
+const binOf = f => clamp(Math.floor(Math.log2(f/F_MIN)/Math.log2(F_MAX/F_MIN)*HB), 0, HB-1);
+const binF  = i => F_MIN * Math.pow(F_MAX/F_MIN, i/HB);
+const xOf   = f => Math.log2(f/F_MIN)/Math.log2(F_MAX/F_MIN)*100;
 const flash = i => { rungs[i].classList.remove('hit'); void rungs[i].offsetWidth; rungs[i].classList.add('hit'); };
 const bumpTally = i => { tally[i]++; rungs[i].querySelector('.tally').textContent = tally[i]; };
 const resetTally = () => { tally.fill(0); rungs.forEach(r => r.querySelector('.tally').textContent = '0'); };
@@ -482,12 +557,13 @@ function drawBunny(b){
 /* ══════════════════════════════════════════
    5. 主循环 · main loop
    ══════════════════════════════════════════ */
-let last = performance.now();
+let last = performance.now(), lastSum = 0, sumOpen_ = false;
 function frame(now){
   const dt = Math.min(0.034, (now - last)/1000);
   last = now;
-  if (running) listen();
+  if (running){ listen(); listenSec += dt; }
   step(dt);
+  if (sumOpen_ && now - lastSum > 400){ lastSum = now; renderSummary(); }
   ctx.clearRect(0, 0, W, H);
   for (const b of bunnies) drawBunny(b);
   requestAnimationFrame(frame);
@@ -502,6 +578,11 @@ const overlay = document.getElementById('overlay');
 const gravOn  = document.getElementById('grav');
 const sens    = document.getElementById('sens');
 const dot     = document.getElementById('dot');
+const meterFill = document.getElementById('meterFill');
+const aecWarn   = document.getElementById('aecWarn');
+const sumMeta = document.getElementById('sumMeta'), sumChart = document.getElementById('sumChart');
+const sumAxis = document.getElementById('sumAxis'), sumTable = document.getElementById('sumTable');
+const sumSuggest = document.getElementById('sumSuggest');
 const fOut = document.getElementById('fOut'), nOut = document.getElementById('nOut');
 const bOut = document.getElementById('bOut'), cOut = document.getElementById('cOut');
 
@@ -509,32 +590,51 @@ let ac = null, an = null, stream = null, running = false;
 let spec = null, prev = null, fluxAvg = 0, lastSpawn = 0;
 
 async function start(){
+  // iOS 关键：AudioContext 必须在点击的同一个同步执行栈里创建并 resume。
+  // 一旦 await 过，Safari 的用户手势凭证就失效，context 会卡在 suspended，
+  // analyser 读出来全是静音——桌面 Chrome 不会触发，所以很容易漏掉。
+  // Create and resume the context inside the gesture stack: after an await,
+  // iOS Safari has dropped the activation token and the context stays suspended.
+  try {
+    ac = new (window.AudioContext || window.webkitAudioContext)();
+    ac.resume();
+  } catch (e){
+    return fail(['浏览器不支持 Web Audio', 'Web Audio unavailable',
+                 '这个浏览器打不开音频引擎。iPhone 上请用 Safari 打开，微信、小红书等 App 内置浏览器常常不给权限。',
+                 'This browser cannot open an audio engine. On iPhone use Safari itself — in-app browsers often block microphone access.']);
+  }
+
   try {
     stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         echoCancellation: false,   // ← 关键：否则浏览器会消掉你音箱的声音
         noiseSuppression: false,   //    otherwise the browser cancels your own speakers
-        autoGainControl:  false,
+        autoGainControl:  false,   //    注意 iOS Safari 会无视这三条
       }
     });
   } catch (e){
+    ac.close(); ac = null;
     return fail(e.name === 'NotAllowedError'
       ? ['麦克风被拒绝了', 'Microphone blocked',
-         '到地址栏左边的图标里把麦克风改成「允许」，再点一次开始聆听。如果页面嵌在 iframe 里，直接在新标签页打开。',
-         'Open the icon at the left of the address bar, set Microphone to Allow, then hit Listen again. If this page is inside an iframe, open it in its own tab.']
+         '到地址栏左边的图标里把麦克风改成「允许」，再点一次开始聆听。iPhone 上是地址栏左边的「ᴀA」→ 网站设置。',
+         'Set Microphone to Allow — on iPhone, tap the ᴀA button at the left of the address bar, then Website Settings.']
       : ['打不开麦克风', 'No input device',
          '没有找到可用的输入设备，或者被别的程序占用了。检查一下系统的麦克风设置。',
          'No usable input was found, or another app is holding it. Check your system microphone settings.']);
   }
 
-  ac = new (window.AudioContext || window.webkitAudioContext)();
-  await ac.resume();
+  if (ac.state === 'suspended') await ac.resume();
   an = ac.createAnalyser();
   an.fftSize = 8192;
   an.smoothingTimeConstant = 0.35;
   an.minDecibels = -95;
   an.maxDecibels = -12;
   ac.createMediaStreamSource(stream).connect(an);
+
+  // 看系统实际给了什么——iOS 会强制打开 AEC，这时同机外放的音乐会被消掉
+  // Report what the system actually applied: iOS forces AEC on regardless.
+  const got = stream.getAudioTracks()[0]?.getSettings?.() || {};
+  aecWarn.hidden = got.echoCancellation !== true;
 
   spec = new Float32Array(an.frequencyBinCount);
   prev = new Float32Array(an.frequencyBinCount);
@@ -555,6 +655,8 @@ function stop(){
   micBtn.classList.remove('live');
   dot.classList.remove('on');
   needle.classList.remove('on');
+  meterFill.style.width = '0%';
+  aecWarn.hidden = true;
   fOut.textContent = nOut.textContent = bOut.textContent = '—';
 }
 
@@ -587,6 +689,7 @@ function listen(){
   }
   loud /= (i1 - i0 + 1) * 100;
   fluxAvg = fluxAvg*0.93 + flux*0.07;
+  meterFill.style.width = clamp(loud*240, 0, 100).toFixed(0) + '%';
 
   // 加权峰值：+TILT dB/oct 抵消音乐天然的低频滚降
   let best = -1e9, bi = -1;
@@ -594,7 +697,7 @@ function listen(){
     const s = Math.max(spec[i], -100) + TILT*Math.log2((i*binHz)/F_MIN);
     if (s > best){ best = s; bi = i; }
   }
-  if (bi < 1 || loud < 0.05){ needle.classList.remove('on'); return; }
+  if (bi < 1 || loud < 0.025){ needle.classList.remove('on'); return; }   // iOS 信号弱得多
 
   // 抛物线插值取亚 bin 精度 · parabolic interpolation for sub-bin accuracy
   const a = Math.max(spec[bi-1],-100), b = Math.max(spec[bi],-100), c = Math.max(spec[bi+1],-100);
@@ -603,6 +706,7 @@ function listen(){
   if (!(f > F_MIN && f < F_MAX)) return;
 
   const band = bandOf(f);
+  hist[binOf(f)]++; bandFrames[band]++;
   fOut.textContent = Math.round(f) + ' Hz';
   nOut.textContent = noteName(f);
   bOut.textContent = (band+1) + ' · ' + BANDS[band].lab;
@@ -619,19 +723,109 @@ function listen(){
   // 起音判定 · onset
   const k = 2.35 - (sens.value/100)*1.15;   // 1.20 灵敏 … 2.35 迟钝
   const now = performance.now(), quiet = now - lastSpawn;
-  if ((flux > fluxAvg*k && flux > 6 && quiet > 170) || (quiet > 1300 && loud > 0.14)){
+  if ((flux > fluxAvg*k && flux > 6 && quiet > 170) || (quiet > 1300 && loud > 0.09)){
     lastSpawn = now;
+    spawnBins[binOf(f)]++;
     spawn(band, Math.min(1, loud*2.6));
   }
 }
 
+
 /* ══════════════════════════════════════════
-   7. 交互 · controls
+   8. 总结面板 · summary sheet
+   ══════════════════════════════════════════ */
+const sheet = document.getElementById('summary');
+
+// 累积分布在 q 处的分位数，格内按对数插值
+// Quantile of the cumulative distribution, log-interpolated inside the bin.
+function quantile(q){
+  const total = hist.reduce((a,b)=>a+b, 0);
+  if (!total) return NaN;
+  let acc = 0;
+  for (let i=0;i<HB;i++){
+    if (acc + hist[i] >= q*total && hist[i] > 0){
+      const frac = (q*total - acc)/hist[i];
+      return binF(i) * Math.pow(binF(i+1)/binF(i), frac);
+    }
+    acc += hist[i];
+  }
+  return F_MAX;
+}
+const tidy = f => f < 1000 ? Math.round(f/5)*5 : Math.round(f/10)*10;
+
+function renderSummary(){
+  const total = hist.reduce((a,b)=>a+b, 0);
+  const spawned = tally.reduce((a,b)=>a+b, 0);
+  const mm = Math.floor(listenSec/60), ss = Math.floor(listenSec%60);
+
+  if (!total){
+    sumMeta.textContent = '还没有数据 · nothing recorded yet';
+    sumChart.innerHTML = ''; sumAxis.innerHTML = ''; sumTable.innerHTML = '';
+    sumSuggest.innerHTML = '点「开始聆听」放一首歌，这里会长出音高的分布。'
+      + '<span class="en">Hit Listen and play a song — the distribution builds up here.</span>';
+    return;
+  }
+
+  sumMeta.textContent = `聆听 ${mm}分${String(ss).padStart(2,'0')}秒 · ${total.toLocaleString()} 帧 · `
+    + `${spawned} 只兔子 · 每格 1/12 倍频程`;
+
+  // —— 直方图 ——
+  const peak = Math.max(...hist);
+  let bars = '';
+  for (let i=0;i<HB;i++){
+    const c = Math.sqrt(binF(i)*binF(i+1));
+    bars += `<b style="--c:${BANDS[bandOf(c)].col};height:${(hist[i]/peak*100).toFixed(1)}%"></b>`;
+  }
+  for (let k=1;k<NB;k++) bars += `<i style="left:${xOf(BANDS[k].lo).toFixed(2)}%"></i>`;
+  sumChart.innerHTML = bars;
+
+  let ax = `<span style="left:0">${F_MIN}</span>`;
+  for (let k=1;k<NB;k++) ax += `<span style="left:${xOf(BANDS[k].lo).toFixed(2)}%">${BANDS[k].lo}</span>`;
+  sumAxis.innerHTML = ax + `<span style="left:100%">${F_MAX}</span>`;
+
+  // —— 每档占比 ——
+  const fmax = Math.max(...bandFrames);
+  sumTable.innerHTML = BANDS.map((b,i) => {
+    const pc = bandFrames[i]/total*100;
+    return `<div class="sumrow" style="--c:${b.col}"><s></s>
+      <span class="nm">${b.lab}</span>
+      <span class="rg">${b.lo}–${isFinite(b.hi)?b.hi:'∞'}</span>
+      <span class="bar"><u style="width:${(bandFrames[i]/fmax*100).toFixed(1)}%"></u></span>
+      <span class="pc">${pc.toFixed(1)}%</span>
+      <span class="ct">${tally[i]} 只</span></div>`;
+  }).join('');
+
+  // —— 等分位建议边界 ——
+  const cuts = [];
+  for (let k=1;k<NB;k++) cuts.push(tidy(quantile(k/NB)));
+  const spread = (Math.max(...bandFrames) / Math.max(1, Math.min(...bandFrames))).toFixed(1);
+  sumSuggest.innerHTML =
+    `把累积分布在 1/${NB}、2/${NB}… 处切开，就是让七档占比相等的边界。当前最挤和最空的档相差 <b>${spread}×</b>。`
+    + `<span class="en">Cutting the cumulative distribution at k/${NB} gives the edges that equalise occupancy. `
+    + `Current max/min band ratio: ${spread}×.</span>`
+    + `<code>${cuts.join('  ·  ')} Hz</code>`;
+}
+
+function resetStats(){
+  hist.fill(0); spawnBins.fill(0); bandFrames.fill(0); listenSec = 0;
+  resetTally(); if (sumOpen_) renderSummary();
+}
+
+document.getElementById('sumOpen').onclick = () => {
+  sheet.hidden = false; sumOpen_ = true; renderSummary();
+};
+const closeSheet = () => { sheet.hidden = true; sumOpen_ = false; };
+document.getElementById('sumClose').onclick = closeSheet;
+sheet.addEventListener('pointerdown', e => { if (e.target === sheet) closeSheet(); });
+addEventListener('keydown', e => { if (e.key === 'Escape' && sumOpen_) closeSheet(); });
+
+/* ══════════════════════════════════════════
+   9. 交互 · controls
    ══════════════════════════════════════════ */
 micBtn.onclick = () => running ? stop() : start();
 document.getElementById('clear').onclick = () => {
   for (const b of bunnies) b.dying ||= 1e-6;
-  resetTally();
+  resetStats();
 };
 gravOn.onchange = () => {
   // 切模式时立刻把速度拉回合理范围 · re-normalise speeds on mode switch
@@ -642,7 +836,7 @@ gravOn.onchange = () => {
 };
 
 addEventListener('keydown', e => {
-  if (e.target.tagName === 'INPUT') return;
+  if (e.target.tagName === 'INPUT' || sumOpen_) return;
   const n = '1234567'.indexOf(e.key);
   if (n >= 0){ e.preventDefault(); spawn(n, 0.75); }
 });
