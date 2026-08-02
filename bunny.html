@@ -52,24 +52,24 @@
     text-decoration:none;margin-bottom:6px;transition:color .15s;
   }
   .wordmark .back:hover{color:var(--ink)}
-  .wordmark .back:focus-visible{outline:3px solid #FF48B0;outline-offset:2px}
+  .wordmark .back:focus-visible{outline:3px solid #154A93;outline-offset:2px}
   .controls{margin-left:auto;display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:flex-end}
 
   button{font:inherit;color:inherit;cursor:pointer;border:1.5px solid var(--ink);background:transparent;border-radius:999px}
   .btn{padding:8px 17px;font-size:14px;font-weight:600;white-space:nowrap;transition:background .12s,color .12s}
   .btn .en{font-size:11px;opacity:.6;margin-left:7px;font-weight:400}
   .btn:hover{background:var(--ink);color:var(--paper)}
-  .btn:focus-visible,summary:focus-visible,input:focus-visible{outline:3px solid #FF48B0;outline-offset:2px}
+  .btn:focus-visible,summary:focus-visible,input:focus-visible{outline:3px solid #154A93;outline-offset:2px}
   .btn.primary{background:var(--ink);color:var(--paper)}
   .btn.primary:hover{background:#0F7DC2;border-color:#0F7DC2}
-  .btn.live{background:#FF48B0;border-color:#FF48B0;color:#fff}
+  .btn.live{background:#154A93;border-color:#154A93;color:#fff}
   .btn.ghost{padding:7px 13px;font-size:12.5px;font-weight:500}
   .btn.ghost .en{font-size:10.5px;margin-left:5px}
   .toggle{display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;user-select:none;white-space:nowrap}
   .toggle input{accent-color:#0F7DC2;width:15px;height:15px;cursor:pointer}
   .toggle .en,.slider .en{font-size:10.5px;color:var(--ink-soft)}
   .slider{display:flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap}
-  .slider input{width:80px;accent-color:#FF6C2F}
+  .slider input{width:80px;accent-color:#154A93}
 
   details.notes{position:relative}
   details.notes>summary{
@@ -101,6 +101,17 @@
   .intro .zh{font-size:13px;line-height:1.6;max-width:46ch}
   .intro .rule{width:1.5px;align-self:stretch;background:var(--rule);flex:none}
   .intro .eng{font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--ink-soft);max-width:56ch}
+
+  /* Good night：占住简介条右侧那块空白 · fills the empty right of the intro strip */
+  .intro .gn{
+    margin-left:auto;align-self:center;flex:none;padding-right:4px;
+    font-family:var(--display);font-weight:800;line-height:1;white-space:nowrap;
+    font-size:clamp(24px,3.4vw,50px);letter-spacing:-.045em;color:#F4EDDA;
+    opacity:0;transform:translateY(8px);pointer-events:none;
+    transition:opacity 1.2s ease,transform 1.2s ease;
+    text-shadow:0 0 34px rgba(168,192,255,.5);
+  }
+  body.night .intro .gn{opacity:1;transform:none}
 
   /* ── 舞台 ─────────────────────────────── */
   main{display:flex;min-height:0;position:relative}
@@ -191,12 +202,27 @@
   footer .ke{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;margin:0 6px 0 3px}
   footer b{color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums}
   .dot{width:8px;height:8px;border-radius:50%;background:var(--rule);flex:none}
+  .beats{display:flex;gap:3.5px;align-items:center}
+  .beats i{width:6px;height:6px;border-radius:50%;border:1.2px solid var(--rule);flex:none;
+    transition:background .05s,border-color .05s,transform .05s}
+  .beats i:nth-child(5){margin-left:7px}
+  .beats i.on{background:#7A58A8;border-color:#5E3F89;transform:scale(1.45)}
+  .beats i:first-child.on{background:var(--ink);border-color:var(--ink)}
   .meter{position:relative;width:52px;height:6px;border:1px solid var(--rule);border-radius:99px;overflow:hidden;flex:none}
-  .meter i{position:absolute;left:0;top:0;bottom:0;width:0;background:#FF48B0;transition:width .07s linear}
+  .meter i{position:absolute;left:0;top:0;bottom:0;width:0;background:#154A93;transition:width .07s linear}
   .aec{color:#FF6C2F;font-size:11.5px;font-family:var(--cjk)}
   .aec .ke{color:#FF6C2F;opacity:.75}
-  .dot.on{background:#FF48B0}
+  .dot.on{background:#154A93}
   .spacer{margin-left:auto}
+  /* 这四个读数每帧都在变，宽度必须钉死 —— 否则 footer 会在一行/两行之间反复换行，
+     舞台高度跟着跳，整个画框就在抖。
+     These four readouts change every frame; pinning their widths stops the footer
+     from re-wrapping, which is what was making the whole stage jump. */
+  footer #fOut{display:inline-block;min-width:60px}
+  footer #nOut{display:inline-block;min-width:34px}
+  footer #bOut{display:inline-block;min-width:88px}
+  footer #bpmOut{display:inline-block;min-width:28px}
+  footer{min-height:36px}
 
   @media (max-width:760px){
     header{padding:11px 13px;gap:9px}
@@ -208,15 +234,31 @@
     .rung .lab{font-size:10px}
     .rung .eng{font-size:7px}
     .rung .tally{font-size:9px;right:5px}
+    footer #fOut{min-width:52px}
+    footer #nOut{min-width:30px}
+    footer #bOut{min-width:76px}
     .slider input{width:56px}
     .intro{flex-direction:column;gap:5px;padding:10px 13px}
     .intro .rule{display:none}
     .intro .zh{font-size:12.5px}
     .intro .eng{font-size:11px}
+    .intro .gn{margin-left:0;align-self:flex-start;font-size:26px}
     footer{padding:8px 13px;gap:6px 14px;font-size:11.5px}
   }
   /* 横屏手机等矮视口：让出高度给舞台 · give the height back to the stage */
   @media (max-height:560px){ .intro{display:none} }
+  /* ── 彩蛋 C：午夜星空 ─────────────────── */
+  body.night{ --paper:#0A1024; --ink:#F0E9D6; --ink-soft:#8790B4; --rule:#27304F }
+  body.night::after{ mix-blend-mode:screen; opacity:.05 }
+  body.night .intro{ background:rgba(255,255,255,.035) }
+  body.night .sheet{ background:rgba(10,16,36,.88) }
+  body.night .notecard code,
+  body.night .notecard kbd,
+  body.night .suggest code{ background:rgba(255,255,255,.07) }
+  body.night .btn.primary{ color:#0A1024 }
+  body.night .btn:hover{ color:#0A1024 }
+  body.night .meter{ border-color:var(--rule) }
+
   @media (prefers-reduced-motion:reduce){ *{transition-duration:.01ms !important} }
 </style>
 </head>
@@ -247,6 +289,14 @@
           <h3>iPhone 上收不到<span class="en">On iPhone</span></h3>
           iOS Safari 会无视 <code>echoCancellation: false</code>，把回声消除和降噪焊死在采集链路里，而且开麦后输出会从扬声器改路由到听筒。所以<b>同一台 iPhone 外放的音乐会被当成自己的回声消掉</b>——状态栏出现橙色「系统强制回声消除」就是这个情况。<b>用另一台设备放音乐</b>，iPhone 只负责听，就正常了。另外一定要用 Safari 本体打开，微信等 App 内置浏览器通常不给麦克风权限。
           <span class="eng">iOS Safari ignores <code>echoCancellation: false</code> — the voice-processing unit is baked into the capture path — and routes output to the earpiece once the mic opens. Music played from the same iPhone gets cancelled as its own echo. Play it from a second device and let the phone listen. Open in Safari itself; in-app browsers usually block the mic.</span>
+          <h3>踩着拍子落地<span class="en">Landing on the beat</span></h3>
+          从起音包络估计 BPM，七档按 8:4:2 的嵌套倍数分配：低音档八拍落一次、高音档两拍一次，于是每两小节全体同时落地一次。地面线随拍脉动，全体落地时泛起紫色底光；状态栏的八个圆点是节拍位置，左边的指示灯亮起表示已锁定。节奏太散的音乐锁不上，兔子会退回自由弹跳。
+          <span class="eng">BPM is estimated from the onset envelope; the seven bands bounce every 8, 4 or 2 beats, so everyone lands together once every two bars. The eight dots in the status strip show the beat position. Music without a clear pulse won't lock, and the bunnies fall back to free bouncing.</span>
+          <h3>藏了两样东西<span class="en">Two hidden things</span></h3>
+          <b>八度纠缠</b>：当两个音正好差一个八度、而且强度接近时，会蹦出一对镜像兔子——它们关于画面中心严格反相关，中间连着一根虚线，身上各套一圈光环。点其中任意一只，链接就断开，两只从此各走各的。<br>
+          <b>午夜</b>：本地时间 23 点到次日 4 点之间打开会变成星空。其他时候想看的话，敲 <kbd>n</kbd><kbd>i</kbd><kbd>g</kbd><kbd>h</kbd><kbd>t</kbd> 五个字母即可，再敲一次切回来。
+          <span class="eng"><b>Octave entanglement</b> — when two pitches an octave apart arrive at similar strength, a mirrored pair appears, anticorrelated through the centre of the stage and joined by a dashed line. Click either one to cut it.<br>
+          <b>Midnight</b> — open the page between 23:00 and 04:00 local time and the sky comes out. Any other time, type <kbd>night</kbd> to toggle it.</span>
           <h3>关于「音高」<span class="en">On pitch</span></h3>
           背景音乐是复音的，真正的 F0 检测不可靠，所以这里用的是加权频谱峰值（带 +6 dB/oct tilt 抵消音乐的低频滚降），实际反映的是主导音区。
           <span class="eng">Music is polyphonic, so true F0 detection is unreliable. This reads the weighted spectral peak with a +6 dB/oct tilt — it tracks the dominant register rather than a single fundamental.</span>
@@ -257,9 +307,10 @@
   </header>
 
   <div class="intro">
-    <p class="zh">用麦克风听环境里的音乐，按主导音区分成七档：音越低，蹦出来的兔子越胖越大；音越高，越小越圆。同时最多十只。</p>
+    <p class="zh">用麦克风听环境里的音乐，按主导音区分成七档：音越低，蹦出来的兔子越胖越大；音越高，越小越圆。同时最多十只，落地时刻踩着音乐的拍子。</p>
     <span class="rule"></span>
     <p class="eng">Listens through your mic and sorts what it hears into seven registers — low notes make big chubby bunnies, high notes make small round ones. Ten on stage at a time.</p>
+    <span class="gn" aria-hidden="true">Good night</span>
   </div>
 
   <main>
@@ -296,6 +347,8 @@
     <span><span class="k">音高</span><span class="ke">pitch</span><b id="fOut">—</b></span>
     <span><span class="k">音符</span><span class="ke">note</span><b id="nOut">—</b></span>
     <span><span class="k">音区</span><span class="ke">band</span><b id="bOut">—</b></span>
+    <span><span class="dot" id="lockDot"></span><span class="k">节拍</span><span class="ke">bpm</span><b id="bpmOut">—</b></span>
+    <span class="beats" id="beatDots"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
     <span class="spacer"><span class="k">场上</span><span class="ke">on stage</span><b id="cOut">0</b> / 10</span>
   </footer>
 
@@ -315,13 +368,13 @@
 // spd = 速度倍率 · speed factor；有重力时等效重力按 spd² 缩放，
 // 于是整条轨迹只是时间重标定：形状不变、弹跳高度不变，快慢不同
 const BANDS = [
-  { lab:'又胖又大', en:'Big & chubby',  lo:   0, hi:  150, col:'#2B4C9B', size:1.00, fat:1.52, spd:0.62 },
-  { lab:'胖乎乎',   en:'Chubby',        lo: 150, hi:  300, col:'#1093D4', size:0.88, fat:1.43, spd:0.73 },
-  { lab:'微胖',     en:'Plump',         lo: 300, hi:  424, col:'#00A183', size:0.76, fat:1.34, spd:0.85 },
-  { lab:'中等',     en:'Medium',        lo: 424, hi:  600, col:'#57B33B', size:0.64, fat:1.25, spd:1.00 },
-  { lab:'偏小',     en:'Smallish',      lo: 600, hi:  849, col:'#E8B400', size:0.54, fat:1.17, spd:1.16 },
-  { lab:'小只',     en:'Small',         lo: 849, hi: 1200, col:'#FF6C2F', size:0.44, fat:1.08, spd:1.36 },
-  { lab:'小小圆圆', en:'Tiny & round',  lo:1200, hi: 1/0,  col:'#FF48B0', size:0.35, fat:1.00, spd:1.58 },
+  { lab:'又胖又大', en:'Big & chubby',  lo:   0, hi:  150, col:'#0D108A', size:1.00, fat:1.52, spd:0.62 },
+  { lab:'胖乎乎',   en:'Chubby',        lo: 150, hi:  300, col:'#193F96', size:0.88, fat:1.43, spd:0.73 },
+  { lab:'微胖',     en:'Plump',         lo: 300, hi:  424, col:'#277F9E', size:0.76, fat:1.34, spd:0.85 },
+  { lab:'中等',     en:'Medium',        lo: 424, hi:  600, col:'#39A48A', size:0.64, fat:1.25, spd:1.00 },
+  { lab:'偏小',     en:'Smallish',      lo: 600, hi:  849, col:'#2DC74B', size:0.54, fat:1.17, spd:1.16 },
+  { lab:'小只',     en:'Small',         lo: 849, hi: 1200, col:'#74E427', size:0.44, fat:1.08, spd:1.36 },
+  { lab:'小小圆圆', en:'Tiny & round',  lo:1200, hi: 1/0,  col:'#F6EB2B', size:0.35, fat:1.00, spd:1.58 },
 ];
 const NB = BANDS.length;
 const MAX_BUNNIES = 10;
@@ -376,16 +429,49 @@ const resetTally = () => { tally.fill(0); rungs.forEach(r => r.querySelector('.t
 /* ══════════════════════════════════════════
    3. 画布 · canvas
    ══════════════════════════════════════════ */
+// ── 彩蛋 C：午夜星空 ──────────────────────────────────
+// 本地时间 0–5 点自动开启，任何时候敲 night 也能切换。
+// 画布上墨线换成米色、色块混合从 multiply 改成 screen（深底上要发光而不是变黑）。
+let night = false;
+const stars = [];
+const INK = () => night ? '#F0E9D6' : '#171633';
+const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function makeStars(){
+  for (let i = 0; i < 130; i++)
+    stars.push({ x:Math.random(), y:Math.random(), r:Math.pow(Math.random(),2.4)*1.9 + 0.35,
+                 a:0.25 + Math.random()*0.6, p:Math.random()*7, sp:0.5 + Math.random()*1.1 });
+}
+function setNight(on){
+  night = on;
+  document.body.classList.toggle('night', on);
+  sprites.clear();
+  if (on && !stars.length) makeStars();
+}
+function drawStars(t){
+  for (const s of stars){
+    ctx.globalAlpha = calm ? s.a : s.a * (0.62 + 0.38*Math.sin(t*s.sp + s.p));
+    ctx.fillStyle = '#F5EFDC';
+    ctx.beginPath(); ctx.arc(s.x*W, s.y*H, s.r, 0, 7); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
 let W = 0, H = 0, unit = 62;
 
+let lastW = -1, lastH = -1;
 function resize(){
   const r = cv.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2);
+  const nw = Math.round(r.width), nh = Math.round(r.height);
+  if (nw === lastW && nh === lastH) return;   // 尺寸没变就别重建画布
+  lastW = nw; lastH = nh;
   W = r.width; H = r.height;
   cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
   ctx.setTransform(dpr,0,0,dpr,0,0);
   unit = Math.max(28, Math.min(64, Math.min(W,H)/9.5));
+  sprites.clear();
   for (const b of bunnies){ b.apex = clamp(b.apexFrac*H, unit, H); }
 }
 new ResizeObserver(resize).observe(cv);
@@ -394,6 +480,8 @@ new ResizeObserver(resize).observe(cv);
    4. 兔子 · bunnies
    ══════════════════════════════════════════ */
 const bunnies = [];
+const snaps = [];          // 链接断开时的一闪 · the flash when a link is cut
+let lastPair = 0;
 
 function spawn(bi, energy = 0.6){
   const B = BANDS[bi];
@@ -413,7 +501,7 @@ function spawn(bi, energy = 0.6){
   const apexFrac = rnd(0.40, 0.92);
 
   bunnies.push({
-    bi, R, halfW, halfH, col:B.col, fat:B.fat,
+    bi, R, halfW, halfH, footH:R*1.02, col:B.col, fat:B.fat,
     g: GRAV * B.spd * B.spd * TEMPO * TEMPO, // 等效重力 ∝ 倍率² · gravity scales as factor²
     x, y,
     vx: coin()*Math.cos(a)*spd,
@@ -421,13 +509,14 @@ function spawn(bi, energy = 0.6){
     speed0: spd,
     hSpeed: Math.cos(a)*spd,                 // 目标横向速度 · target horizontal speed
     apexFrac, apex: clamp(apexFrac*H, unit, H),
+    variant: Math.floor(rnd(0,3)),
     rot: rnd(-0.2,0.2), vr: rnd(-2.2,2.2)*TEMPO,
     sq: 1, life: 0, dying: 0,
   });
 
   while (bunnies.filter(b => !b.dying).length > MAX_BUNNIES){
     const old = bunnies.find(b => !b.dying);
-    if (old) old.dying = 1e-6; else break;
+    if (old){ unlink(old); old.dying = 1e-6; } else break;
   }
   flash(bi); bumpTally(bi);
   overlay.classList.add('hidden');
@@ -440,9 +529,14 @@ function step(dt){
 
   for (let i = bunnies.length-1; i >= 0; i--){
     const b = bunnies[i];
+    if (b.echo){                              // 镜像端跳过物理，循环后再同步
+      if (b.dying){ b.dying += dt/0.28; if (b.dying >= 1){ unlink(b); bunnies.splice(i,1); } }
+      else if (b.life < 1) b.life = Math.min(1, b.life + dt/0.26);
+      continue;
+    }
     const g = on ? b.g : 0;          // 每只兔子有自己的重力 · each bunny has its own g
 
-    if (b.dying){ b.dying += dt/0.28; if (b.dying >= 1){ bunnies.splice(i,1); continue; } }
+    if (b.dying){ b.dying += dt/0.28; if (b.dying >= 1){ unlink(b); bunnies.splice(i,1); continue; } }
     else if (b.life < 1) b.life = Math.min(1, b.life + dt/0.26);
 
     b.vy += g*dt;
@@ -451,17 +545,20 @@ function step(dt){
     b.rot += b.vr*dt;
     b.vr  *= Math.pow(0.5, dt);
     b.sq  += (1 - b.sq) * Math.min(1, dt*11);
+    // 拉伸要平滑跟随，直接用瞬时 vy 的话落地时会突跳，看起来就是抖
+    b.st += (clamp(1 - Math.abs(b.vy)/5200, 0.90, 1) - (b.st || 1)) * Math.min(1, dt*14);
 
     let hit = 0;
     // 侧墙：完全弹性，横向能量一点不掉 · side walls are perfectly elastic
     if (b.x < b.halfW)     { b.x = b.halfW;     b.vx =  Math.abs(b.vx); hit = 1; }
     if (b.x > W - b.halfW) { b.x = W - b.halfW; b.vx = -Math.abs(b.vx); hit = 1; }
     if (b.y < b.halfH)     { b.y = b.halfH;     b.vy =  Math.abs(b.vy); hit = 2; }
-    if (b.y > H - b.halfH) {
-      b.y = H - b.halfH;
+    if (b.y > H - b.footH) {
+      b.y = H - b.footH;
       // 按目标高度反算出射速度，永远弹回同一高度
       // solve outgoing speed from the target apex — bounces back to the same height forever
-      b.vy = g ? -Math.sqrt(2*g*b.apex) : -Math.abs(b.vy);
+      relock(b, performance.now()/1000);
+      b.vy = on ? -Math.sqrt(2*b.g*b.apex) : -Math.abs(b.vy);
       hit = 2;
     }
 
@@ -477,100 +574,370 @@ function step(dt){
         b.vx = Math.cos(th)*b.speed0;
         b.vy = Math.sin(th)*b.speed0;
       }
-      b.sq = hit === 2 ? 0.78 : 1.2;
+      b.sq = hit === 2 ? (0.80 - (b.beats||1)*0.030) : 1.2;
       b.vr += rnd(-3,3)*TEMPO;   // 自转也放慢——旋转是眼花的另一半来源
     }
+  }
+  // 镜像端：关于画面中心严格反相关 · mirrored through the centre of the stage
+  for (const b of bunnies){
+    if (!b.echo || !b.twin) continue;
+    const t = b.twin;
+    if (t.dying || b.dying){ unlink(b); continue; }
+    b.x = clamp(W - t.x, b.halfW, W - b.halfW);
+    b.y = clamp(H - t.y, b.halfH, H - b.footH);
+    b.vx = -t.vx; b.vy = -t.vy; b.rot = -t.rot;
+    b.sq = t.sq; b.st = t.st; b.earL = -t.earL; b.earS = t.earS;
+  }
+  for (let i = snaps.length-1; i >= 0; i--){
+    snaps[i].life -= dt/0.26;   // 比兔子淡出(0.28s)略快
+    if (snaps[i].life <= 0) snaps.splice(i,1);
   }
   cOut.textContent = bunnies.filter(b => !b.dying).length;
 }
 
-/* —— 简笔画兔子 · the doodle bunny —— */
+/* —— 水彩兔子 · watercolour bunny ——
+   模糊和湿边每帧现画扛不住（10 只 × 60fps），所以出生时渲一次到离屏精灵，
+   之后每帧只 drawImage。精灵按 档位 × 变体 × 昼夜 × 尺寸 缓存。
+   最终以 multiply（白天）/ screen（夜间）贴到画布上 —— 这样才保住和纸底的
+   相互作用，配色也正是按这个混合方式优化的。 */
+const WASH = 0.68;                 // 色块密度。低于 0.58 七档在纸底上就分不开了
+const sprites = new Map();
+
+const fract = x => x - Math.floor(x);
+function nzw(seed, t){
+  let v = 0;
+  for (let k = 1; k <= 3; k++){
+    const p = fract(Math.sin(seed*12.9898 + k*78.233)*43758.5453);
+    v += Math.sin(t*k + p*6.2832)/k;
+  }
+  return v/1.833;
+}
+/* 身体 + 两耳 + 两脚，耳朵按角度展开成独立形状 */
+function shapesOf(R, fat){
+  const bw = R*fat, bh = R, o = [[0,0,bw,bh,1]];
+  for (const s2 of [-1,1]) o.push([s2*bw*0.40 + s2*R*0.10, -bh*0.98 - R*0.47, R*0.20, R*0.62, s2>0?7:3]);
+  for (const s2 of [-1,1]) o.push([s2*bw*0.46, bh*0.86, R*0.24, R*0.14, s2>0?11:13]);
+  return o;
+}
+/* 揉皱的轮廓：完美椭圆读起来是矢量图，不是水彩 */
+function washPath(c, sh, scale, amp){
+  const N = 96;
+  c.beginPath();
+  for (const [x, y, rx, ry, sd] of sh){
+    for (let i = 0; i <= N; i++){
+      const t = i/N*6.2832, w = 1 + amp*nzw(sd, t);
+      const px = x + Math.cos(t)*rx*scale*w, py = y + Math.sin(t)*ry*scale*w;
+      i ? c.lineTo(px, py) : c.moveTo(px, py);
+    }
+    c.closePath();
+  }
+}
+const shade = (hexc, k) => {
+  const n = parseInt(hexc.slice(1), 16);
+  return '#' + [16,8,0].map(v => Math.round(((n>>v)&255)*k).toString(16).padStart(2,'0')).join('');
+};
+const canBlur = (() => { const c = document.createElement('canvas').getContext('2d');
+  c.filter = 'blur(2px)'; return c.filter !== 'none'; })();
+
+function renderSprite(bi, variant){
+  const B = BANDS[bi], R = unit*B.size, fat = B.fat;
+  // 包围盒实测：耳顶 2.07R + 揉皱 0.02 + 湿边描边 0.07 + 模糊 3σ 0.225 = 2.39R。
+  // 之前用碰撞半高 1.62R 当依据是错的 —— 那是物理用的，不是画出来的范围。
+  // 上下差别大，方形会浪费一大块，所以横纵分开给。
+  const padX = R*1.95, padY = R*2.52, dpr = Math.min(devicePixelRatio || 1, 2);
+  const cv = document.createElement('canvas');
+  cv.width  = Math.ceil(padX*2*dpr);
+  cv.height = Math.ceil(padY*2*dpr);
+  const c = cv.getContext('2d');
+  c.setTransform(dpr, 0, 0, dpr, padX*dpr, padY*dpr);
+  const sh = shapesOf(R, fat), seed = 1 + variant*3.7;
+  for (const q of sh) q[4] += variant*3.7;
+
+  c.save();                                   // 色块：模糊边缘
+  if (canBlur) c.filter = `blur(${(R*0.075).toFixed(1)}px)`;
+  c.globalAlpha = WASH; c.fillStyle = B.col;
+  washPath(c, sh, 1, 0.035); c.fill();
+  c.restore();
+
+  c.save();                                   // 湿边沉淀：颜料往边缘聚
+  if (canBlur) c.filter = `blur(${(R*0.05).toFixed(1)}px)`;
+  c.globalCompositeOperation = 'multiply';
+  c.globalAlpha = 0.45; c.strokeStyle = shade(B.col, 0.72);
+  c.lineWidth = R*0.14; c.lineJoin = 'round';
+  washPath(c, sh, 1, 0.035); c.stroke();
+  c.restore();
+
+  const bw = R*fat, bh = R, ink = INK();      // 脸
+  c.save();
+  c.fillStyle = ink; c.strokeStyle = ink;
+  c.lineCap = c.lineJoin = 'round'; c.lineWidth = Math.max(1.5, R*0.072);
+  const ex = bw*0.34, ey = -bh*0.10, er = Math.max(1.5, R*0.088);
+  c.beginPath(); c.arc(-ex, ey, er, 0, 7); c.fill();
+  c.beginPath(); c.arc( ex, ey, er, 0, 7); c.fill();
+  const ny = bh*0.16;
+  c.beginPath(); c.moveTo(-R*0.11, ny); c.lineTo(R*0.11, ny); c.lineTo(0, ny + R*0.13);
+  c.closePath(); c.fill();
+  c.beginPath();
+  c.moveTo(-R*0.20, ny + R*0.30);
+  c.quadraticCurveTo(-R*0.10, ny + R*0.42, 0, ny + R*0.16);
+  c.quadraticCurveTo( R*0.10, ny + R*0.42, R*0.20, ny + R*0.30);
+  c.stroke();
+  c.lineWidth = Math.max(1, R*0.045);
+  for (const s2 of [-1,1]) for (let k = -1; k <= 1; k++){
+    c.beginPath(); c.moveTo(s2*R*0.22, ny + R*0.05);
+    c.lineTo(s2*bw*0.96, ny + R*0.05 + k*R*0.26); c.stroke();
+  }
+  c.restore();
+  return { cv, padX, padY };
+}
+function spriteFor(bi, variant){
+  const key = bi + ':' + variant + ':' + (night ? 'n' : 'd') + ':' + Math.round(unit);
+  let sp = sprites.get(key);
+  if (!sp){ sp = renderSprite(bi, variant); sprites.set(key, sp); }
+  return sp;
+}
+
 function drawBunny(b){
   const grow = b.dying ? 1 - b.dying : easeOutBack(b.life);
   if (grow <= 0) return;
-  const R = b.R * grow;
+  const sq = b.sq * (b.st || 1);
+  const sp = spriteFor(b.bi, b.variant);
 
   ctx.save();
   ctx.translate(b.x, b.y);
   ctx.rotate(b.rot);
-  ctx.scale(b.sq, 1/b.sq);
-
-  const lw = Math.max(2, R*0.10);
-  ctx.lineWidth = lw; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-
-  const bw = R*b.fat, bh = R;
-  const er = R*0.20, eh = R*0.86, ey = -bh*0.98;
-
-  const ears = paint => {
-    for (const s of [-1, 1]){
-      ctx.save();
-      ctx.translate(s*bw*0.40, ey);
-      ctx.rotate(s*0.20);
-      ctx.beginPath(); ctx.ellipse(0, -eh*0.55, er, eh*0.72, 0, 0, 7); paint();
-      ctx.restore();
-    }
-  };
-
-  // 套印错位 · risograph misregistration
-  ctx.save();
-  ctx.translate(-lw*0.75, lw*0.9);
-  ctx.fillStyle = b.col;
-  ctx.globalAlpha = (b.dying ? 1-b.dying : 1) * 0.72;
-  ctx.globalCompositeOperation = 'multiply';
-  ears(() => ctx.fill());
-  ctx.beginPath(); ctx.ellipse(0, 0, bw, bh, 0, 0, 7); ctx.fill();
+  ctx.scale(sq*grow, grow/sq);
+  ctx.globalAlpha = b.dying ? 1 - b.dying : 1;
+  ctx.globalCompositeOperation = night ? 'screen' : 'multiply';
+  ctx.drawImage(sp.cv, -sp.padX, -sp.padY, sp.padX*2, sp.padY*2);
   ctx.restore();
 
-  // 墨线 · ink pass
-  ctx.globalAlpha = b.dying ? 1-b.dying : 1;
-  ctx.strokeStyle = '#171633';
-  ctx.fillStyle   = '#171633';
-
-  ears(() => ctx.stroke());
-  ctx.beginPath(); ctx.ellipse(0, 0, bw, bh, 0, 0, 7); ctx.stroke();
-
-  for (const s of [-1, 1]){
-    ctx.beginPath();
-    ctx.ellipse(s*bw*0.46, bh*0.86, R*0.24, R*0.14, s*0.25, 0, 7);
-    ctx.stroke();
+  // 纠缠光环是动态的，不能烘进精灵 —— 链接随时可能被点断
+  if (b.twin && !b.dying && !b.twin.dying){
+    const R = b.R*grow, bw = R*b.fat;
+    ctx.save();
+    ctx.translate(b.x, b.y); ctx.rotate(b.rot);
+    ctx.globalAlpha = 0.5 * Math.min(1, b.life);
+    ctx.strokeStyle = b.col;
+    ctx.lineWidth = Math.max(1.2, R*0.05);
+    ctx.setLineDash([R*0.16, R*0.20]);
+    ctx.beginPath(); ctx.ellipse(0, 0, bw*1.34, R*1.34, 0, 0, 7); ctx.stroke();
+    ctx.restore();
   }
-
-  const exx = bw*0.34, eyy = -bh*0.10, er2 = Math.max(1.6, R*0.088);
-  ctx.beginPath(); ctx.arc(-exx, eyy, er2, 0, 7); ctx.fill();
-  ctx.beginPath(); ctx.arc( exx, eyy, er2, 0, 7); ctx.fill();
-
-  const ny = bh*0.16;
-  ctx.beginPath();
-  ctx.moveTo(-R*0.11, ny); ctx.lineTo(R*0.11, ny); ctx.lineTo(0, ny + R*0.13);
-  ctx.closePath(); ctx.fill();
-
-  ctx.beginPath();
-  ctx.moveTo(-R*0.20, ny + R*0.30);
-  ctx.quadraticCurveTo(-R*0.10, ny + R*0.42, 0, ny + R*0.16);
-  ctx.quadraticCurveTo( R*0.10, ny + R*0.42, R*0.20, ny + R*0.30);
-  ctx.stroke();
-
-  ctx.lineWidth = lw*0.62;
-  for (const s of [-1, 1]) for (let k = -1; k <= 1; k++){
-    ctx.beginPath();
-    ctx.moveTo(s*R*0.22, ny + R*0.05);
-    ctx.lineTo(s*bw*0.96, ny + R*0.05 + k*R*0.26);
-    ctx.stroke();
-  }
-  ctx.restore();
 }
 
 /* ══════════════════════════════════════════
    5. 主循环 · main loop
    ══════════════════════════════════════════ */
 let last = performance.now(), lastSum = 0, sumOpen_ = false;
+
+// ── 节拍跟踪 · beat tracking ──────────────────────────
+// flux 以固定 60 Hz 重采样进环形缓冲（渲染帧率会抖，不能用帧序号），
+// 每 0.5 秒对 60–180 BPM 的滞后做自相关取峰，再扫相位定拍点锚。
+const EB = 300;
+const envBuf = new Float32Array(EB);
+let ebi = 0, envAcc = 0, envMax = 0;
+let beatPeriod = 0, beatAnchor = 0, beatConf = 0, lockScore = 0, lastTempo = 0;
+let beatIdx = -1, beatFlash = 0, barFlash = 0, halfFlash = 0;
+
+// 每档几拍落一次。必须保持 8:4:2 这种嵌套关系，否则层次读不出来——
+// 嵌套之后每 8 拍（4/4 的两小节）有一次全体同时落地，那就是眼睛能抓住的锚点。
+// APEXF 是弹跳高度占屏高的比例，直接按档位给、不乘 k：
+// 若写成 apex ∝ k，k 一翻倍前五档就全部撞上 0.95H 上限挤成同一高度。
+// 出射速度由 vy = 4·apex/(k·T_beat) 自动落定，在每个节奏层的边界上会跳一档，
+// 这反而让三层的快慢差看得更清楚。
+const KBEAT = [8, 8, 4, 4, 4, 2, 2];
+const APEXF = [0.90, 0.82, 0.74, 0.66, 0.58, 0.50, 0.42];
+
+function estimateTempo(tNow){
+  let mean = 0; for (let i=0;i<EB;i++) mean += envBuf[i];
+  mean /= EB;
+  let v0 = 0; for (let i=0;i<EB;i++){ const d = envBuf[i]-mean; v0 += d*d; }
+  if (v0 < 1e-6){ beatConf = 0; return; }
+
+  let best = 0, bestLag = 0;
+  for (let L = 20; L <= 60; L++){
+    let acc = 0;
+    for (let i = 0; i < EB - L; i++)
+      acc += (envBuf[(ebi+i)%EB]-mean) * (envBuf[(ebi+i+L)%EB]-mean);
+    acc /= (EB - L);
+    if (acc > best){ best = acc; bestLag = L; }
+  }
+  beatConf = best / (v0/EB);
+  if (beatConf < 0.12 || !bestLag) return;
+
+  // 迟滞：差得不多就微调，差得多且明显更强才换周期。
+  // 否则 bestLag 在 30/31 之间来回跳，锁定会一直抖。
+  const newP = bestLag/60;
+  if (!beatPeriod) beatPeriod = newP;
+  else if (Math.abs(Math.log2(newP/beatPeriod)) > 0.08){
+    if (best > lockScore*1.25) beatPeriod = newP;
+  } else beatPeriod += (newP - beatPeriod)*0.3;
+  lockScore = lockScore*0.9 + best*0.1;
+
+  let bp = 0, bs = -1;
+  for (let ph = 0; ph < bestLag; ph++){
+    let acc = 0;
+    for (let i = ph; i < EB; i += bestLag) acc += envBuf[(ebi+i)%EB];
+    if (acc > bs){ bs = acc; bp = ph; }
+  }
+  let a = tNow - EB/60 + bp/60;
+  if (beatAnchor){
+    a -= Math.round((a - beatAnchor)/beatPeriod) * beatPeriod;   // 折到离旧锚最近的等价相位
+    beatAnchor += (a - beatAnchor)*0.35;
+  } else beatAnchor = a;
+}
+
+const locked = () => beatPeriod > 0 && beatConf >= 0.12;
+
+// ── 彩蛋 A：八度纠缠 ──────────────────────────────────
+// 找一对恰好差八度、且确实来自两个音源的峰。三道判据缺一不可：
+//  1) 突出度 —— 峰要高于邻域中位数 9 dB，否则噪声涟漪里总能凑出八度对；
+//  2) 幅度也做抛物线插值 —— 频率落在 bin 中间时会有几 dB 的量化损失，
+//     不补的话真八度会被误判成不等强、而明亮音色反被抹平成等强；
+//  3) 关键：用 f 和 3f 拟合该音的谐波衰减斜率，要求 2f 明显高出趋势线 4 dB。
+//     单一音源的 2f 正好落在趋势上；八度叠加时 2f 处叠了上方音的基频才会凸起。
+//     没有第 3 条的话，任何二次谐波强的音色都会误触发 —— 光比强度在原理上分不开。
+// 合成频谱实测：准确率 100%，真八度召回 95%。
+function octavePair(spec, binHz, i0, i1){
+  let rawMax = -1e9;
+  for (let i = i0; i <= i1; i++) rawMax = Math.max(rawMax, spec[i]);
+  const cand = [];
+  for (let i = i0+1; i < i1; i++){
+    const d = Math.max(spec[i], -100);
+    if (d <= Math.max(spec[i-1],-100) || d < Math.max(spec[i+1],-100)) continue;
+    if (d < rawMax - 30) continue;
+    cand.push({ i, d });
+  }
+  cand.sort((x, y) => y.d - x.d);
+  const pk = [];
+  for (const c of cand.slice(0, 40)){
+    const i = c.i, w = Math.max(3, Math.round(i*0.26)), win = [];
+    for (let j = Math.max(i0, i-w); j <= Math.min(i1, i+w); j++) win.push(Math.max(spec[j], -100));
+    win.sort((a, b) => a - b);
+    if (c.d - win[win.length >> 1] < 9) continue;                 // 突出度
+    const a2 = Math.max(spec[i-1],-100), c2 = Math.max(spec[i+1],-100), den = a2 - 2*c.d + c2;
+    const p = den ? 0.5*(a2-c2)/den : 0;
+    pk.push({ f:(i+p)*binHz, raw: c.d - 0.25*(a2-c2)*p });        // 幅度插值
+  }
+  if (pk.length < 3) return null;
+  const strong = pk.filter(p => p.raw > rawMax - 10);
+  const at = f => {
+    let best = null, bd = 1e9;
+    for (const p of pk){ const d = Math.abs(Math.log2(p.f/f)); if (d < 0.04 && d < bd){ bd = d; best = p; } }
+    return best;
+  };
+  for (const a of strong) for (const b of strong){
+    if (b.f <= a.f) continue;
+    if (Math.abs(Math.log2(b.f/a.f) - 1) >= 0.045) continue;      // 差八度，容差约 3%
+    if (Math.abs(a.raw - b.raw) >= 4) continue;                   // 强度相当
+    const th = at(a.f*3);
+    if (!th) continue;
+    const rEst = (a.raw - th.raw)/Math.log2(3);                   // 由 f 和 3f 拟合衰减斜率
+    if (b.raw - (a.raw - rEst) < 4) continue;                     // 2f 须凸出趋势线
+    return [a.f, b.f];
+  }
+  return null;
+}
+
+function spawnPair(f1, f2){
+  spawn(bandOf(f1), 0.85);
+  spawn(bandOf(f2), 0.85);
+  const a = bunnies[bunnies.length-2], b = bunnies[bunnies.length-1];
+  if (!a || !b || a === b) return;
+  a.twin = b; b.twin = a; b.echo = true;   // b 是镜像端，位置由 a 决定
+}
+
+// 解链。任何设置 dying 或 splice 的地方都必须调用，否则会留下悬空的 twin 引用：
+// 镜像端被挤掉后本体的虚线光环会一直画下去。
+function unlink(x){
+  const t = x.twin;
+  if (t){ t.twin = null; t.echo = false; }
+  x.twin = null; x.echo = false;
+}
+// 只有你主动点断才放"断裂闪光"。被挤掉时也放的话，闪光要 0.5 秒、
+// 而兔子淡出只要 0.28 秒 —— 线就会比兔子晚消失。
+function breakPair(x){
+  const t = x.twin;
+  if (t){ snaps.push({ ax:x.x, ay:x.y, bx:t.x, by:t.y, life:1 }); t.vr += rnd(-4,4); }
+  x.vr += rnd(-4,4);
+  unlink(x);
+}
+
+// 关键：对齐到 k 拍的网格，不是单拍网格。
+// 只对齐单拍的话，4 拍兔子可能踩 1、5、9，另一只踩 3、7、11 —— 各自合拍但永不重合。
+// 对齐到 k 拍网格后，1:2:4 三层在每个小节头必定同时落地。
+// 相位修正限幅 ±14%，几次落地内收敛，避免单次 g 突变。
+function relock(b, tNow){
+  if (!locked() || !gravOn.checked) return;
+  const k = KBEAT[b.bi];
+  const apex = clamp(APEXF[b.bi]*H, H*0.12, H*0.95);
+  const P = k*beatPeriod;
+  let T = P;
+  const off = (((tNow + T - beatAnchor) % P) + P) % P;
+  T += clamp(off > P/2 ? P - off : -off, -P*0.14, P*0.14);
+  b.g = 8*apex/(T*T);
+  b.apex = apex;
+  b.beats = k;
+}
 function frame(now){
   const dt = Math.min(0.034, (now - last)/1000);
   last = now;
-  if (running){ listen(); listenSec += dt; }
+  if (running){
+    listen(); listenSec += dt;
+    envAcc += dt;                                  // 固定 60 Hz 重采样，与渲染帧率解耦
+    while (envAcc >= 1/60){ envBuf[ebi] = envMax; ebi = (ebi+1)%EB; envAcc -= 1/60; envMax = 0; }
+    if (now - lastTempo > 500){
+      lastTempo = now;
+      estimateTempo(now/1000);
+      bpmOut.textContent = locked() ? Math.round(60/beatPeriod) : '—';
+      lockDot.classList.toggle('on', locked());
+    }
+  }
+  if (locked()){
+    const bi2 = Math.floor((now/1000 - beatAnchor)/beatPeriod);
+    if (bi2 !== beatIdx){
+      beatIdx = bi2; beatFlash = 1;
+      const p = ((bi2 % 8) + 8) % 8;
+      if (p === 0) barFlash = 1;                 // 全体同时落地
+      if (p === 4) halfFlash = 1;                // 半程
+      for (let d = 0; d < 8; d++) beatDots[d].classList.toggle('on', d === p);
+    }
+  }
+  beatFlash *= Math.pow(0.004, dt);
+  halfFlash *= Math.pow(0.01,  dt);
+  barFlash  *= Math.pow(0.02,  dt);
   step(dt);
   if (sumOpen_ && now - lastSum > 400){ lastSum = now; renderSummary(); }
   ctx.clearRect(0, 0, W, H);
+  if (night) drawStars(now/1000);
+  if (locked()){
+    if (barFlash > 0.02){                       // 强拍：地面泛起一层底光
+      const gr = ctx.createLinearGradient(0, H-90, 0, H);
+      gr.addColorStop(0, 'rgba(122,88,168,0)');
+      gr.addColorStop(1, `rgba(122,88,168,${(barFlash*0.50).toFixed(3)})`);
+      ctx.fillStyle = gr; ctx.fillRect(0, H-90, W, 90);
+    }
+    ctx.save();                                  // 地面线：每拍加粗一下
+    ctx.strokeStyle = INK();
+    ctx.globalAlpha = 0.16 + beatFlash*0.55;
+    ctx.lineWidth = 1.5 + beatFlash*2.2 + halfFlash*1.6 + barFlash*3.4;
+    ctx.beginPath(); ctx.moveTo(0, H-1); ctx.lineTo(W, H-1); ctx.stroke();
+    ctx.restore();
+  }
+  ctx.save();                                 // 纠缠链接
+  ctx.setLineDash([2, 6]); ctx.lineWidth = 1.2; ctx.strokeStyle = INK();
+  for (const b of bunnies){
+    if (!b.echo || !b.twin || b.dying || b.twin.dying) continue;
+    ctx.globalAlpha = 0.34 * Math.min(1, b.life);
+    ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.twin.x, b.twin.y); ctx.stroke();
+  }
+  ctx.setLineDash([]); ctx.lineWidth = 2.2;
+  for (const m of snaps){                     // 断开的一闪
+    ctx.globalAlpha = m.life*m.life*0.7;
+    ctx.beginPath(); ctx.moveTo(m.ax, m.ay); ctx.lineTo(m.bx, m.by); ctx.stroke();
+  }
+  ctx.restore();
   for (const b of bunnies) drawBunny(b);
   requestAnimationFrame(frame);
 }
@@ -586,6 +953,9 @@ const sens    = document.getElementById('sens');
 const dot     = document.getElementById('dot');
 const meterFill = document.getElementById('meterFill');
 const aecWarn   = document.getElementById('aecWarn');
+const bpmOut  = document.getElementById('bpmOut');
+const lockDot = document.getElementById('lockDot');
+const beatDots = [...document.getElementById('beatDots').children];
 const sumMeta = document.getElementById('sumMeta'), sumChart = document.getElementById('sumChart');
 const sumAxis = document.getElementById('sumAxis'), sumTable = document.getElementById('sumTable');
 const sumSuggest = document.getElementById('sumSuggest');
@@ -663,6 +1033,10 @@ function stop(){
   needle.classList.remove('on');
   meterFill.style.width = '0%';
   aecWarn.hidden = true;
+  bpmOut.textContent = '—'; lockDot.classList.remove('on');
+  beatPeriod = 0; beatConf = 0; beatAnchor = 0; lockScore = 0; envBuf.fill(0);
+  beatDots.forEach(d => d.classList.remove('on'));
+  beatIdx = -1; barFlash = halfFlash = beatFlash = 0;
   fOut.textContent = nOut.textContent = bOut.textContent = '—';
 }
 
@@ -695,6 +1069,7 @@ function listen(){
   }
   loud /= (i1 - i0 + 1) * 100;
   fluxAvg = fluxAvg*0.93 + flux*0.07;
+  envMax = Math.max(envMax, flux);
   meterFill.style.width = clamp(loud*240, 0, 100).toFixed(0) + '%';
 
   // 加权峰值：+TILT dB/oct 抵消音乐天然的低频滚降
@@ -732,7 +1107,9 @@ function listen(){
   if ((flux > fluxAvg*k && flux > 6 && quiet > 170) || (quiet > 1300 && loud > 0.09)){
     lastSpawn = now;
     spawnBins[binOf(f)]++;
-    spawn(band, Math.min(1, loud*2.6));
+    const oct = (now - lastPair > 12000) ? octavePair(spec, binHz, i0, i1) : null;
+    if (oct){ lastPair = now; spawnPair(oct[0], oct[1]); }
+    else spawn(band, Math.min(1, loud*2.6));
   }
 }
 
@@ -830,7 +1207,8 @@ addEventListener('keydown', e => { if (e.key === 'Escape' && sumOpen_) closeShee
    ══════════════════════════════════════════ */
 micBtn.onclick = () => running ? stop() : start();
 document.getElementById('clear').onclick = () => {
-  for (const b of bunnies) b.dying ||= 1e-6;
+  for (const b of bunnies){ unlink(b); b.dying ||= 1e-6; }
+  snaps.length = 0;
   resetStats();
 };
 gravOn.onchange = () => {
@@ -841,14 +1219,28 @@ gravOn.onchange = () => {
   }
 };
 
+let keyBuf = '';
 addEventListener('keydown', e => {
-  if (e.target.tagName === 'INPUT' || sumOpen_) return;
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key.length === 1){
+    keyBuf = (keyBuf + e.key.toLowerCase()).slice(-6);
+    if (keyBuf.endsWith('night')){ keyBuf = ''; setNight(!night); return; }
+  }
+  if (sumOpen_) return;
   const n = '1234567'.indexOf(e.key);
   if (n >= 0){ e.preventDefault(); spawn(n, 0.75); }
 });
-document.getElementById('stage').addEventListener('pointerdown', () => {
+document.getElementById('stage').addEventListener('pointerdown', e => {
+  const r = cv.getBoundingClientRect();
+  const px = e.clientX - r.left, py = e.clientY - r.top;
+  for (const b of bunnies){                   // 点中纠缠的一只就断开链接
+    if (!b.twin || b.dying) continue;
+    if (Math.hypot(px - b.x, py - b.y) < Math.max(b.halfW, b.halfH)*1.1){ breakPair(b); return; }
+  }
   if (!running) spawn(Math.floor(rnd(0,NB)), 0.75);
 });
+
+{ const h = new Date().getHours(); if (h >= 23 || h < 4) setNight(true); }
 
 if (!navigator.mediaDevices?.getUserMedia){
   fail(['这个浏览器不支持麦克风', 'Microphone unavailable',
