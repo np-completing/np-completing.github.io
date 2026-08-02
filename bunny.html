@@ -124,6 +124,9 @@
   .rung::before{content:"";position:absolute;inset:0;background:var(--c);opacity:0;transition:opacity .5s ease-out}
   .rung.hit::before{opacity:.55;transition:opacity 0s}
   .rung>*{position:relative}
+  .rung{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  .wordmark{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  .wordmark a{-webkit-touch-callout:none}
   /* 色条走左边缘，不吃纵向空间 · colour rides the left edge, costs no height */
   .rung .swatch{position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c)}
   .rung .top{display:flex;align-items:baseline;gap:6px}
@@ -237,6 +240,13 @@
     footer #fOut{min-width:52px}
     footer #nOut{min-width:30px}
     footer #bOut{min-width:76px}
+    /* 说明卡原来是相对按钮绝对定位的，按钮在窄屏会被挤到左边，
+       卡片就从屏幕左侧溢出去了。改成固定在底部的抽屉。 */
+    .notecard{
+      position:fixed;left:10px;right:10px;bottom:10px;top:auto;width:auto;
+      max-height:min(70vh,520px);overflow:auto;z-index:60;
+      box-shadow:4px 4px 0 var(--ink), 0 0 0 100vmax rgba(23,22,51,.42);
+    }
     .slider input{width:56px}
     .intro{flex-direction:column;gap:5px;padding:10px 13px}
     .intro .rule{display:none}
@@ -274,29 +284,34 @@
       <label class="slider" title="越靠右越容易蹦兔子 · higher = spawns more easily">灵敏<span class="en">sens</span><input id="sens" type="range" min="0" max="100" value="58"></label>
       <label class="toggle"><input id="grav" type="checkbox" checked>重力<span class="en">gravity</span></label>
       <button class="btn ghost" id="sumOpen">总结<span class="en">Summary</span></button>
+      <button class="btn ghost" id="filePick">放歌<span class="en">File</span></button>
+      <input type="file" id="fileIn" accept="audio/*" hidden>
+      <audio id="au" playsinline loop></audio>
       <button class="btn ghost" id="clear">清空<span class="en">Clear</span></button>
       <details class="notes"><summary>说明<span class="en">About</span></summary>
         <div class="notecard">
           <h3>怎么玩<span class="en">How to play</span></h3>
-          点「开始聆听」，允许麦克风，然后放音乐。低音蹦出又胖又大的兔子，高音蹦出小小圆圆的兔子，最多同时 10 只，满了就挤掉最老的那只。
-          <span class="eng">Hit Listen, allow the mic, then play music. Low notes make big chubby bunnies, high notes make tiny round ones. Ten at a time — the oldest gets bumped.</span>
+          点「开始聆听」，允许麦克风，然后放音乐或弄出点声响。低音蹦出又胖又大的兔子，高音蹦出小小圆圆的兔子，最多同时 10 只，满了就挤掉最老的那只。
+          <span class="eng">Hit Listen, allow the mic, then play music or just make some noise. Low notes make big chubby bunnies, high notes make tiny round ones. Ten at a time — the oldest gets bumped.</span>
           <h3>不用麦克风也行<span class="en">No mic needed</span></h3>
-          按 <kbd>1</kbd>–<kbd>7</kbd> 手动放一只对应音区的兔子，或者直接点画面。
-          <span class="eng">Press 1–7 to drop a bunny from that band by hand, or just click the stage.</span>
+          <b>放歌</b>：点顶栏的「放歌」选一个本地音频文件，声音直接送进分析，完全不经过麦克风——不用授权、不受环境噪声干扰、信号也干净得多。手机上尤其推荐。<br>
+          <b>手动</b>：按 <kbd>1</kbd>–<kbd>7</kbd> 放一只对应音区的兔子。手机上点左边音高梯的任意一格，效果一样。
+          <span class="eng"><b>File</b> — pick a local audio file and it goes straight into the analyser: no microphone, no permission prompt, no room noise, and a much cleaner signal. On a phone this is by far the most reliable route.<br>
+          <b>By hand</b> — press 1–7 to drop a bunny from that band. On a phone, tap any rung of the pitch ladder instead.</span>
           <h3>听不到声音？<span class="en">Hearing nothing?</span></h3>
           先看状态栏那条粉色电平条：一直是空的说明麦克风没数据；有跳动但兔子不出来，就把「灵敏」往右拉。用外放而不是耳机，音量开大一点。
           <span class="eng">Watch the pink level bar in the status strip. Flat means no signal at all; moving but no bunnies means you should raise Sens. Use speakers, not headphones.</span>
           <h3>iPhone 上收不到<span class="en">On iPhone</span></h3>
-          iOS Safari 会无视 <code>echoCancellation: false</code>，把回声消除和降噪焊死在采集链路里，而且开麦后输出会从扬声器改路由到听筒。所以<b>同一台 iPhone 外放的音乐会被当成自己的回声消掉</b>——状态栏出现橙色「系统强制回声消除」就是这个情况。<b>用另一台设备放音乐</b>，iPhone 只负责听，就正常了。另外一定要用 Safari 本体打开，微信等 App 内置浏览器通常不给麦克风权限。
-          <span class="eng">iOS Safari ignores <code>echoCancellation: false</code> — the voice-processing unit is baked into the capture path — and routes output to the earpiece once the mic opens. Music played from the same iPhone gets cancelled as its own echo. Play it from a second device and let the phone listen. Open in Safari itself; in-app browsers usually block the mic.</span>
+          iOS Safari 会无视 <code>echoCancellation: false</code>，把回声消除和降噪焊死在采集链路里，而且开麦后输出会从扬声器改路由到听筒。所以<b>同一台 iPhone 外放的音乐会被当成自己的回声消掉</b>——状态栏出现橙色「系统强制回声消除」就是这个情况。<b>最可靠的办法是点顶栏的「放歌」直接喂一个音频文件</b>，完全不走麦克风。或者用另一台设备放音乐，iPhone 只负责听。另外一定要用 Safari 本体打开，微信等 App 内置浏览器通常不给麦克风权限。
+          <span class="eng">iOS Safari ignores <code>echoCancellation: false</code> — the voice-processing unit is baked into the capture path — and routes output to the earpiece once the mic opens. Music played from the same iPhone gets cancelled as its own echo. The reliable fix is the File button, which feeds an audio file straight in without touching the microphone. Failing that, play the music from a second device. Open in Safari itself; in-app browsers usually block the mic.</span>
           <h3>踩着拍子落地<span class="en">Landing on the beat</span></h3>
           从起音包络估计 BPM，七档按 8:4:2 的嵌套倍数分配：低音档八拍落一次、高音档两拍一次，于是每两小节全体同时落地一次。地面线随拍脉动，全体落地时泛起紫色底光；状态栏的八个圆点是节拍位置，左边的指示灯亮起表示已锁定。节奏太散的音乐锁不上，兔子会退回自由弹跳。
           <span class="eng">BPM is estimated from the onset envelope; the seven bands bounce every 8, 4 or 2 beats, so everyone lands together once every two bars. The eight dots in the status strip show the beat position. Music without a clear pulse won't lock, and the bunnies fall back to free bouncing.</span>
-          <h3>藏了两样东西<span class="en">Two hidden things</span></h3>
+          <h3>一些彩蛋<span class="en">Easter eggs</span></h3>
           <b>八度纠缠</b>：当两个音正好差一个八度、而且强度接近时，会蹦出一对镜像兔子——它们关于画面中心严格反相关，中间连着一根虚线，身上各套一圈光环。点其中任意一只，链接就断开，两只从此各走各的。<br>
-          <b>午夜</b>：本地时间 23 点到次日 4 点之间打开会变成星空。其他时候想看的话，敲 <kbd>n</kbd><kbd>i</kbd><kbd>g</kbd><kbd>h</kbd><kbd>t</kbd> 五个字母即可，再敲一次切回来。
+          <b>午夜</b>：本地时间 23 点到次日 4 点之间打开会变成星空。其他时候想看的话，敲 <kbd>n</kbd><kbd>i</kbd><kbd>g</kbd><kbd>h</kbd><kbd>t</kbd> 五个字母，或者长按左上角的标题不放，都能切换。
           <span class="eng"><b>Octave entanglement</b> — when two pitches an octave apart arrive at similar strength, a mirrored pair appears, anticorrelated through the centre of the stage and joined by a dashed line. Click either one to cut it.<br>
-          <b>Midnight</b> — open the page between 23:00 and 04:00 local time and the sky comes out. Any other time, type <kbd>night</kbd> to toggle it.</span>
+          <b>Midnight</b> — open the page between 23:00 and 04:00 local time and the sky comes out. Any other time, type <kbd>night</kbd> or long-press the wordmark to toggle it.</span>
           <h3>关于「音高」<span class="en">On pitch</span></h3>
           背景音乐是复音的，真正的 F0 检测不可靠，所以这里用的是加权频谱峰值（带 +6 dB/oct tilt 抵消音乐的低频滚降），实际反映的是主导音区。
           <span class="eng">Music is polyphonic, so true F0 detection is unreliable. This reads the weighted spectral peak with a +6 dB/oct tilt — it tracks the dominant register rather than a single fundamental.</span>
@@ -331,10 +346,10 @@
         </div>
       </div>
       <div class="overlay" id="overlay">
-        <div class="big">放点音乐，<br>兔子自己会来。</div>
-        <div class="bigen">Play music. The bunnies show up on their own.</div>
-        <p>点右上角「开始聆听」，允许麦克风，然后用外放放一首歌。
-          <span class="eng">Hit Listen, allow the mic, then play a song out loud.</span></p>
+        <div class="big">放点音乐，<br>兔子蹦出来</div>
+        <div class="bigen">Play music. Out come the bunnies.</div>
+        <p>点右上角「开始聆听」，允许麦克风，然后外放一首歌。
+          <span class="eng">Hit Listen, allow the mic, then play a song out loud. Or hit File to feed it an audio file directly.</span></p>
         <div class="keys">或按 1–7 手动放一只 · or press 1–7 to drop one</div>
       </div>
     </div>
@@ -445,7 +460,6 @@ function makeStars(){
 function setNight(on){
   night = on;
   document.body.classList.toggle('night', on);
-  sprites.clear();
   if (on && !stars.length) makeStars();
 }
 function drawStars(t){
@@ -592,6 +606,22 @@ function step(dt){
     snaps[i].life -= dt/0.26;   // 比兔子淡出(0.28s)略快
     if (snaps[i].life <= 0) snaps.splice(i,1);
   }
+  for (const b of bunnies){
+    if (b.feedT != null){
+      b.feedT += dt;
+      b.nib = 1 + 0.055*Math.sin(b.feedT*Math.PI*7);
+      if (b.feedT >= 1 || b.dying){
+        b.feedT = null; b.nib = 1;
+        if (!b.dying){ b.happy = 1; hearts.push({ b, t:0 }); carrots++; }
+      }
+    } else if (b.happy > 0){
+      b.happy = Math.max(0, b.happy - dt/2.6);
+    }
+  }
+  for (let i = hearts.length-1; i >= 0; i--){
+    hearts[i].t += dt/1.3;
+    if (hearts[i].t >= 1 || hearts[i].b.dying) hearts.splice(i,1);
+  }
   cOut.textContent = bunnies.filter(b => !b.dying).length;
 }
 
@@ -650,7 +680,7 @@ function renderSprite(bi, variant){
   cv.height = Math.ceil(padY*2*dpr);
   const c = cv.getContext('2d');
   c.setTransform(dpr, 0, 0, dpr, padX*dpr, padY*dpr);
-  const sh = shapesOf(R, fat), seed = 1 + variant*3.7;
+  const sh = shapesOf(R, fat);
   for (const q of sh) q[4] += variant*3.7;
 
   c.save();                                   // 色块：模糊边缘
@@ -667,34 +697,110 @@ function renderSprite(bi, variant){
   washPath(c, sh, 1, 0.035); c.stroke();
   c.restore();
 
-  const bw = R*fat, bh = R, ink = INK();      // 脸
-  c.save();
-  c.fillStyle = ink; c.strokeStyle = ink;
-  c.lineCap = c.lineJoin = 'round'; c.lineWidth = Math.max(1.5, R*0.072);
+  return { cv, padX, padY };
+}
+function spriteFor(bi, variant){
+  const key = bi + ':' + variant + ':' + Math.round(unit);   // 脸动态画，精灵与昼夜无关
+  let sp = sprites.get(key);
+  if (!sp){ sp = renderSprite(bi, variant); sprites.set(key, sp); }
+  return sp;
+}
+
+/* 脸每帧现画，这样才能有表情。happy>0 时闭眼笑、嘴角拉宽。 */
+function drawFace(c, R, fat, happy){
+  const bw = R*fat, bh = R, glad = happy > 0.02;
+  c.fillStyle = INK(); c.strokeStyle = INK();
+  c.lineCap = c.lineJoin = 'round';
   const ex = bw*0.34, ey = -bh*0.10, er = Math.max(1.5, R*0.088);
-  c.beginPath(); c.arc(-ex, ey, er, 0, 7); c.fill();
-  c.beginPath(); c.arc( ex, ey, er, 0, 7); c.fill();
+  if (glad){
+    c.lineWidth = Math.max(1.6, R*0.085);
+    for (const s2 of [-1,1]){                       // ^ ^
+      c.beginPath();
+      c.moveTo(s2*ex - er*1.5, ey + er*0.55);
+      c.quadraticCurveTo(s2*ex, ey - er*1.8, s2*ex + er*1.5, ey + er*0.55);
+      c.stroke();
+    }
+  } else {
+    c.beginPath(); c.arc(-ex, ey, er, 0, 7); c.fill();
+    c.beginPath(); c.arc( ex, ey, er, 0, 7); c.fill();
+  }
   const ny = bh*0.16;
   c.beginPath(); c.moveTo(-R*0.11, ny); c.lineTo(R*0.11, ny); c.lineTo(0, ny + R*0.13);
   c.closePath(); c.fill();
+  const mw = glad ? 0.30 : 0.20, md = glad ? 0.56 : 0.42;
+  c.lineWidth = Math.max(1.5, R*0.072);
   c.beginPath();
-  c.moveTo(-R*0.20, ny + R*0.30);
-  c.quadraticCurveTo(-R*0.10, ny + R*0.42, 0, ny + R*0.16);
-  c.quadraticCurveTo( R*0.10, ny + R*0.42, R*0.20, ny + R*0.30);
+  c.moveTo(-R*mw, ny + R*0.30);
+  c.quadraticCurveTo(-R*mw*0.5, ny + R*md, 0, ny + R*0.16);
+  c.quadraticCurveTo( R*mw*0.5, ny + R*md, R*mw, ny + R*0.30);
   c.stroke();
   c.lineWidth = Math.max(1, R*0.045);
   for (const s2 of [-1,1]) for (let k = -1; k <= 1; k++){
     c.beginPath(); c.moveTo(s2*R*0.22, ny + R*0.05);
     c.lineTo(s2*bw*0.96, ny + R*0.05 + k*R*0.26); c.stroke();
   }
-  c.restore();
-  return { cv, padX, padY };
 }
-function spriteFor(bi, variant){
-  const key = bi + ':' + variant + ':' + (night ? 'n' : 'd') + ':' + Math.round(unit);
-  let sp = sprites.get(key);
-  if (!sp){ sp = renderSprite(bi, variant); sprites.set(key, sp); }
-  return sp;
+
+/* 胡萝卜只有一个精灵，按需缩放 —— 尺寸固定，不随档位变 */
+let carrotSpr = null;
+function carrot(){
+  if (carrotSpr) return carrotSpr;
+  const R = 46, pad = R*1.35, dpr = Math.min(devicePixelRatio || 1, 2);
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = Math.ceil(pad*2*dpr);
+  const c = cv.getContext('2d');
+  c.setTransform(dpr, 0, 0, dpr, pad*dpr, pad*dpr);
+  const root = () => {
+    c.beginPath();
+    c.moveTo(-R*0.30, -R*0.40);
+    c.quadraticCurveTo(-R*0.33, R*0.22, 0, R*0.70);
+    c.quadraticCurveTo( R*0.33, R*0.22, R*0.30, -R*0.40);
+    c.quadraticCurveTo(0, -R*0.58, -R*0.30, -R*0.40);
+    c.closePath();
+  };
+  c.save();
+  if (canBlur) c.filter = `blur(${(R*0.055).toFixed(1)}px)`;
+  c.globalAlpha = 0.88; c.fillStyle = '#E9722C'; root(); c.fill();
+  c.restore();
+  c.save();
+  if (canBlur) c.filter = `blur(${(R*0.038).toFixed(1)}px)`;
+  c.globalCompositeOperation = 'multiply'; c.globalAlpha = 0.42;
+  c.strokeStyle = '#A8481A'; c.lineWidth = R*0.11; c.lineJoin = 'round'; root(); c.stroke();
+  c.restore();
+  c.strokeStyle = 'rgba(150,66,20,.45)'; c.lineWidth = Math.max(1, R*0.035); c.lineCap = 'round';
+  for (let k = -1; k <= 1; k++){
+    c.beginPath();
+    c.moveTo(k*R*0.15 - R*0.07, -R*0.12 + Math.abs(k)*R*0.13);
+    c.lineTo(k*R*0.15 + R*0.05,  R*0.00 + Math.abs(k)*R*0.13);
+    c.stroke();
+  }
+  c.save();
+  if (canBlur) c.filter = `blur(${(R*0.045).toFixed(1)}px)`;
+  c.globalAlpha = 0.86; c.fillStyle = '#4E9B3A';
+  for (const ang of [-0.55, 0, 0.55]){
+    c.save(); c.translate(0, -R*0.44); c.rotate(ang);
+    c.beginPath(); c.ellipse(0, -R*0.28, R*0.105, R*0.30, 0, 0, 7); c.fill();
+    c.restore();
+  }
+  c.restore();
+  carrotSpr = { cv, pad };
+  return carrotSpr;
+}
+function heartPath(c, s2){
+  c.beginPath();
+  c.moveTo(0, s2*0.34);
+  c.bezierCurveTo(-s2*1.15, -s2*0.44, -s2*0.52, -s2*1.15, 0, -s2*0.42);
+  c.bezierCurveTo( s2*0.52, -s2*1.15,  s2*1.15, -s2*0.44, 0, s2*0.34);
+  c.closePath();
+}
+const hearts = [];
+let carrots = 0;
+
+// 喂一根。正在吃或还开心着就不重复喂。
+function feed(b){
+  if (b.dying || b.feedT != null || b.happy > 0) return false;
+  b.feedT = 0;
+  return true;
 }
 
 function drawBunny(b){
@@ -706,10 +812,20 @@ function drawBunny(b){
   ctx.save();
   ctx.translate(b.x, b.y);
   ctx.rotate(b.rot);
-  ctx.scale(sq*grow, grow/sq);
+  ctx.scale(sq*grow*(b.nib || 1), grow/sq*(2 - (b.nib || 1)));
   ctx.globalAlpha = b.dying ? 1 - b.dying : 1;
   ctx.globalCompositeOperation = night ? 'screen' : 'multiply';
   ctx.drawImage(sp.cv, -sp.padX, -sp.padY, sp.padX*2, sp.padY*2);
+  drawFace(ctx, b.R*grow, b.fat, b.happy || 0);
+  if (b.feedT != null){                       // 三口吃完
+    const step = Math.min(2, Math.floor(b.feedT*3));
+    const sz = b.R*0.92*(1 - step*0.30);
+    const cs = carrot();
+    ctx.save();
+    ctx.translate(b.R*b.fat*0.30, b.R*0.52); ctx.rotate(-0.42);
+    ctx.drawImage(cs.cv, -sz, -sz, sz*2, sz*2);
+    ctx.restore();
+  }
   ctx.restore();
 
   // 纠缠光环是动态的，不能烘进精灵 —— 链接随时可能被点断
@@ -734,7 +850,7 @@ let last = performance.now(), lastSum = 0, sumOpen_ = false;
 // ── 节拍跟踪 · beat tracking ──────────────────────────
 // flux 以固定 60 Hz 重采样进环形缓冲（渲染帧率会抖，不能用帧序号），
 // 每 0.5 秒对 60–180 BPM 的滞后做自相关取峰，再扫相位定拍点锚。
-const EB = 300;
+const EB = 480;                    // 8 秒 @60Hz。5 秒在 60 BPM 下只有 5 个周期，统计不稳
 const envBuf = new Float32Array(EB);
 let ebi = 0, envAcc = 0, envMax = 0;
 let beatPeriod = 0, beatAnchor = 0, beatConf = 0, lockScore = 0, lastTempo = 0;
@@ -755,20 +871,33 @@ function estimateTempo(tNow){
   let v0 = 0; for (let i=0;i<EB;i++){ const d = envBuf[i]-mean; v0 += d*d; }
   if (v0 < 1e-6){ beatConf = 0; return; }
 
-  let best = 0, bestLag = 0;
-  for (let L = 20; L <= 60; L++){
+  const LO = 20, HI = 60;                       // 180 … 60 BPM
+  const ac2 = new Float64Array(HI+2);
+  for (let L = LO; L <= HI; L++){
     let acc = 0;
     for (let i = 0; i < EB - L; i++)
       acc += (envBuf[(ebi+i)%EB]-mean) * (envBuf[(ebi+i+L)%EB]-mean);
-    acc /= (EB - L);
-    if (acc > best){ best = acc; bestLag = L; }
+    ac2[L] = acc/(EB - L);
   }
-  beatConf = best / (v0/EB);
-  if (beatConf < 0.12 || !bestLag) return;
+  // 速度先验：对数正态，中心 120 BPM。没有它的话自相关天然偏爱长滞后
+  // （相关质量更大），快速曲目会被判成一半速度。
+  const wOf = L => { const z = Math.log2((L/60)/0.5)/0.9; return Math.exp(-0.5*z*z); };
+  let best = 0, bL = 0;
+  for (let L = LO; L <= HI; L++){ const sc = ac2[L]*wOf(L); if (sc > best){ best = sc; bL = L; } }
+  if (!bL){ beatConf = 0; return; }
 
-  // 迟滞：差得不多就微调，差得多且明显更强才换周期。
-  // 否则 bestLag 在 30/31 之间来回跳，锁定会一直抖。
-  const newP = bestLag/60;
+  const half = Math.round(bL/2);                // 倍频校正：半拍处也很强就取更短的
+  if (half >= LO && 3600/half <= 190 && ac2[half] > ac2[bL]*0.86) bL = half;
+
+  beatConf = ac2[bL] / (v0/EB);
+  if (beatConf < 0.12) return;
+
+  // 抛物线插值取亚采样精度。BPM = 3600/L，dBPM/dL = -3600/L²，
+  // 所以 L=20（180 BPM）处一个采样步就差 9 BPM —— 不插值的话快歌必然漂。
+  const a1 = ac2[bL-1] || 0, b1 = ac2[bL], c1 = ac2[bL+1] || 0, den = a1 - 2*b1 + c1;
+  const lag = bL + (den ? clamp(0.5*(a1-c1)/den, -0.5, 0.5) : 0);
+
+  const newP = lag/60;
   if (!beatPeriod) beatPeriod = newP;
   else if (Math.abs(Math.log2(newP/beatPeriod)) > 0.08){
     if (best > lockScore*1.25) beatPeriod = newP;
@@ -776,16 +905,17 @@ function estimateTempo(tNow){
   lockScore = lockScore*0.9 + best*0.1;
 
   let bp = 0, bs = -1;
-  for (let ph = 0; ph < bestLag; ph++){
+  const pL = Math.max(1, Math.round(lag));
+  for (let ph = 0; ph < pL; ph++){
     let acc = 0;
-    for (let i = ph; i < EB; i += bestLag) acc += envBuf[(ebi+i)%EB];
+    for (let i = ph; i < EB; i += pL) acc += envBuf[(ebi+i)%EB];
     if (acc > bs){ bs = acc; bp = ph; }
   }
-  let a = tNow - EB/60 + bp/60;
+  let an2 = tNow - EB/60 + bp/60;
   if (beatAnchor){
-    a -= Math.round((a - beatAnchor)/beatPeriod) * beatPeriod;   // 折到离旧锚最近的等价相位
-    beatAnchor += (a - beatAnchor)*0.35;
-  } else beatAnchor = a;
+    an2 -= Math.round((an2 - beatAnchor)/beatPeriod) * beatPeriod;
+    beatAnchor += (an2 - beatAnchor)*0.35;
+  } else beatAnchor = an2;
 }
 
 const locked = () => beatPeriod > 0 && beatConf >= 0.12;
@@ -939,6 +1069,16 @@ function frame(now){
   }
   ctx.restore();
   for (const b of bunnies) drawBunny(b);
+  for (const h of hearts){                    // 爱心浮上去、淡出
+    const a = 1 - h.t;
+    ctx.save();
+    ctx.globalAlpha = a*0.9;
+    ctx.fillStyle = '#E2647F';
+    ctx.translate(h.b.x + Math.sin(h.t*4.2)*7, h.b.y - h.b.halfH - 12 - h.t*48);
+    heartPath(ctx, Math.max(6, h.b.R*0.22)*(0.75 + 0.25*a));
+    ctx.fill();
+    ctx.restore();
+  }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
@@ -965,6 +1105,41 @@ const bOut = document.getElementById('bOut'), cOut = document.getElementById('cO
 let ac = null, an = null, stream = null, running = false;
 let spec = null, prev = null, fluxAvg = 0, lastSpawn = 0;
 
+let micSrc = null, fileSrc = null, mode = null;
+const au = document.getElementById('au');
+
+// AudioContext 常驻不关：createMediaElementSource 每个 <audio> 只能建一次，
+// 原来 stop() 里的 ac.close() 会让文件源永久失效。
+function ensureCtx(){
+  if (ac) return true;
+  try {
+    ac = new (window.AudioContext || window.webkitAudioContext)();
+  } catch (e){ return false; }
+  an = ac.createAnalyser();
+  an.fftSize = 8192; an.smoothingTimeConstant = 0.35;
+  an.minDecibels = -95; an.maxDecibels = -12;
+  spec = new Float32Array(an.frequencyBinCount);
+  prev = new Float32Array(an.frequencyBinCount);
+  return true;
+}
+function stopMic(){
+  micSrc?.disconnect(); micSrc = null;
+  stream?.getTracks().forEach(t => t.stop()); stream = null;
+}
+function stopFile(){
+  au.pause();
+  if (au.src){ URL.revokeObjectURL(au.src); au.removeAttribute('src'); au.load(); }
+}
+function goLive(which){
+  mode = which; running = true; fluxAvg = 0;
+  dot.classList.add('on');
+  overlay.classList.add('hidden');
+  micBtn.innerHTML = which === 'mic' ? '停止<span class="en">Stop</span>' : '开始聆听<span class="en">Listen</span>';
+  micBtn.classList.toggle('live', which === 'mic');
+  filePick.innerHTML = which === 'file' ? '停止<span class="en">Stop</span>' : '放歌<span class="en">File</span>';
+  filePick.classList.toggle('live', which === 'file');
+}
+
 async function start(){
   // iOS 关键：AudioContext 必须在点击的同一个同步执行栈里创建并 resume。
   // 一旦 await 过，Safari 的用户手势凭证就失效，context 会卡在 suspended，
@@ -972,8 +1147,9 @@ async function start(){
   // Create and resume the context inside the gesture stack: after an await,
   // iOS Safari has dropped the activation token and the context stays suspended.
   try {
-    ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (!ensureCtx()) throw new Error('no ctx');
     ac.resume();
+    stopFile();
   } catch (e){
     return fail(['浏览器不支持 Web Audio', 'Web Audio unavailable',
                  '这个浏览器打不开音频引擎。iPhone 上请用 Safari 打开，微信、小红书等 App 内置浏览器常常不给权限。',
@@ -989,7 +1165,6 @@ async function start(){
       }
     });
   } catch (e){
-    ac.close(); ac = null;
     return fail(e.name === 'NotAllowedError'
       ? ['麦克风被拒绝了', 'Microphone blocked',
          '到地址栏左边的图标里把麦克风改成「允许」，再点一次开始聆听。iPhone 上是地址栏左边的「ᴀA」→ 网站设置。',
@@ -1000,35 +1175,24 @@ async function start(){
   }
 
   if (ac.state === 'suspended') await ac.resume();
-  an = ac.createAnalyser();
-  an.fftSize = 8192;
-  an.smoothingTimeConstant = 0.35;
-  an.minDecibels = -95;
-  an.maxDecibels = -12;
-  ac.createMediaStreamSource(stream).connect(an);
+  micSrc = ac.createMediaStreamSource(stream);
+  micSrc.connect(an);
 
   // 看系统实际给了什么——iOS 会强制打开 AEC，这时同机外放的音乐会被消掉
   // Report what the system actually applied: iOS forces AEC on regardless.
   const got = stream.getAudioTracks()[0]?.getSettings?.() || {};
   aecWarn.hidden = got.echoCancellation !== true;
 
-  spec = new Float32Array(an.frequencyBinCount);
-  prev = new Float32Array(an.frequencyBinCount);
-  fluxAvg = 0;
-
-  running = true;
-  micBtn.innerHTML = '停止<span class="en">Stop</span>';
-  micBtn.classList.add('live');
-  dot.classList.add('on');
-  overlay.classList.add('hidden');
+  goLive('mic');
 }
 
 function stop(){
-  running = false;
-  stream?.getTracks().forEach(t => t.stop());
-  ac?.close(); ac = null; an = null; stream = null;
+  running = false; mode = null;
+  stopMic(); stopFile();
   micBtn.innerHTML = '开始聆听<span class="en">Listen</span>';
   micBtn.classList.remove('live');
+  filePick.innerHTML = '放歌<span class="en">File</span>';
+  filePick.classList.remove('live');
   dot.classList.remove('on');
   needle.classList.remove('on');
   meterFill.style.width = '0%';
@@ -1150,7 +1314,7 @@ function renderSummary(){
   }
 
   sumMeta.textContent = `聆听 ${mm}分${String(ss).padStart(2,'0')}秒 · ${total.toLocaleString()} 帧 · `
-    + `${spawned} 只兔子 · 每格 1/12 倍频程`;
+    + `${spawned} 只兔子` + (carrots ? ` · 喂了 ${carrots} 根胡萝卜` : '') + ` · 每格 1/12 倍频程`;
 
   // —— 直方图 ——
   const peak = Math.max(...hist);
@@ -1190,7 +1354,7 @@ function renderSummary(){
 }
 
 function resetStats(){
-  hist.fill(0); spawnBins.fill(0); bandFrames.fill(0); listenSec = 0;
+  hist.fill(0); spawnBins.fill(0); bandFrames.fill(0); listenSec = 0; carrots = 0;
   resetTally(); if (sumOpen_) renderSummary();
 }
 
@@ -1205,7 +1369,36 @@ addEventListener('keydown', e => { if (e.key === 'Escape' && sumOpen_) closeShee
 /* ══════════════════════════════════════════
    9. 交互 · controls
    ══════════════════════════════════════════ */
-micBtn.onclick = () => running ? stop() : start();
+micBtn.onclick = () => (running && mode === 'mic') ? stop() : start();
+
+// 放歌：直接解码音频文件送进 analyser，完全不碰麦克风。
+// iOS Safari 的语音处理没法从网页关掉，这条路径是移动端最可靠的办法。
+// Feed an audio file straight into the analyser — no microphone at all.
+// iOS Safari's voice processing cannot be disabled from the web; this path sidesteps it.
+const filePick = document.getElementById('filePick');
+const fileIn = document.getElementById('fileIn');
+filePick.onclick = () => { if (running && mode === 'file') stop(); else fileIn.click(); };
+fileIn.onchange = () => {
+  const f = fileIn.files && fileIn.files[0];
+  fileIn.value = '';
+  if (!f) return;
+  if (!ensureCtx()) return fail(['浏览器不支持 Web Audio','Web Audio unavailable',
+      '这个浏览器打不开音频引擎。','This browser cannot open an audio engine.']);
+  ac.resume(); stopMic();
+  stopFile();
+  au.src = URL.createObjectURL(f);
+  if (!fileSrc){
+    fileSrc = ac.createMediaElementSource(au);
+    fileSrc.connect(an);              // 分析
+    fileSrc.connect(ac.destination);  // 同时出声。analyser 不必接到 destination
+  }
+  aecWarn.hidden = true;
+  au.play().then(() => goLive('file')).catch(() => {
+    fail(['浏览器拦下了播放','Playback blocked',
+          '再点一次「放歌」试试。iPhone 上还要确认侧面的静音开关没有打开。',
+          'Tap File once more. On iPhone also check the side mute switch.']);
+  });
+};
 document.getElementById('clear').onclick = () => {
   for (const b of bunnies){ unlink(b); b.dying ||= 1e-6; }
   snaps.length = 0;
@@ -1220,6 +1413,30 @@ gravOn.onchange = () => {
 };
 
 let keyBuf = '';
+// 手机上没有键盘：点梯子任意一格 = 手动放一只那一档的兔子（等价于按 1–7）
+// Tap any ladder rung to drop a bunny from that band — the touch equivalent of keys 1–7.
+rungs.forEach((r, i) => r.addEventListener('pointerdown', e => {
+  e.preventDefault(); spawn(i, 0.78);
+}));
+
+// 长按标题 = 切换夜晚。手机上敲不出 night，需要一个手势入口。
+// Long-press the wordmark to toggle night — there is no keyboard on a phone.
+{
+  const wm = document.querySelector('.wordmark');
+  let t = null, x0 = 0, y0 = 0;
+  const cancel = () => { if (t){ clearTimeout(t); t = null; } };
+  wm.addEventListener('pointerdown', e => {
+    x0 = e.clientX; y0 = e.clientY;
+    t = setTimeout(() => { t = null; setNight(!night); }, 650);
+  });
+  wm.addEventListener('pointerup', cancel);
+  wm.addEventListener('pointercancel', cancel);
+  wm.addEventListener('pointerleave', cancel);
+  wm.addEventListener('pointermove', e => {
+    if (t && Math.hypot(e.clientX-x0, e.clientY-y0) > 12) cancel();
+  });
+}
+
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
   if (e.key.length === 1){
@@ -1233,9 +1450,12 @@ addEventListener('keydown', e => {
 document.getElementById('stage').addEventListener('pointerdown', e => {
   const r = cv.getBoundingClientRect();
   const px = e.clientX - r.left, py = e.clientY - r.top;
-  for (const b of bunnies){                   // 点中纠缠的一只就断开链接
-    if (!b.twin || b.dying) continue;
-    if (Math.hypot(px - b.x, py - b.y) < Math.max(b.halfW, b.halfH)*1.1){ breakPair(b); return; }
+  for (let i = bunnies.length-1; i >= 0; i--){   // 从最上层往下找
+    const b = bunnies[i];
+    if (b.dying) continue;
+    if (Math.hypot(px - b.x, py - b.y) > Math.max(b.halfW, b.halfH)*1.1) continue;
+    if (b.twin){ breakPair(b); return; }         // 纠缠中：这一下先断链接
+    feed(b); return;                             // 否则喂一根胡萝卜
   }
   if (!running) spawn(Math.floor(rnd(0,NB)), 0.75);
 });
