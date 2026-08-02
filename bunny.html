@@ -406,7 +406,11 @@ const BANDS = [
 ];
 const NB = BANDS.length;
 const MAX_BUNNIES = 10;
-const F_MIN = 70, F_MAX = 2500;   // 峰值搜索范围 · peak search range
+// 45 Hz 起：贝斯低 E 41 Hz、底鼓基频约 50 Hz，原来的 70 Hz 下限把它们全挡在外面。
+// 市电嗡声不是问题 —— TILT 让 50 Hz 相对 450 Hz 先扣 19 dB，抢不走 argmax；
+// 而且嗡声是稳态的，spectral flux 接近零，不会触发起音。
+// 副作用（好的）：45–70 Hz 的底鼓能量现在计入 flux，节拍跟踪会更稳。
+const F_MIN = 45, F_MAX = 2500;   // 峰值搜索范围 · peak search range
 const TILT  = 6;                  // dB/octave，抵消音乐天然的低频滚降
 const GRAV  = 1500;               // px/s²
 // 全局快慢，只调这一个数：线速度和角速度 ×TEMPO，重力 ×TEMPO²
@@ -440,9 +444,10 @@ const rungs  = BANDS.map((b,i) => {
 });
 const tally = new Array(NB).fill(0);
 
-// 直方图：1/12 倍频程一格（正好一个半音），F_MIN–F_MAX 共 62 格
-// Histogram at one bin per semitone across the search range.
-const HB = 62;
+// 直方图：一格一个半音。范围变宽到 5.80 倍频程后，62 格已经不是半音了
+// （1.12 半音/格），改成 70 格才回到 0.99。
+// Histogram at one bin per semitone across the (now wider) search range.
+const HB = 70;
 const hist       = new Float64Array(HB);   // 每帧检测到的主导频率 · per-frame dominant peak
 const spawnBins  = new Float64Array(HB);   // 真正蹦出兔子的那一刻 · at spawn time
 const bandFrames = new Array(NB).fill(0);
@@ -816,6 +821,89 @@ function feed(b){
   return true;
 }
 
+const megaCache = new Map();
+let mega = null;                              // { kind, t }
+const MEGA_R = 230;                           // 参考尺寸。要放大到画框的 3 倍，源图得够细
+
+function megaBunny(c, R){
+  const col = '#8A60C4', sh = shapesOf(R, 1.30);
+  c.save();
+  if (canBlur) c.filter = `blur(${(R*0.055).toFixed(1)}px)`;
+  c.globalAlpha = 0.82; c.fillStyle = col;
+  washPath(c, sh, 1, 0.03); c.fill();
+  c.restore();
+  c.save();
+  if (canBlur) c.filter = `blur(${(R*0.04).toFixed(1)}px)`;
+  c.globalCompositeOperation = 'multiply'; c.globalAlpha = 0.40;
+  c.strokeStyle = shade(col, 0.72); c.lineWidth = R*0.10; c.lineJoin = 'round';
+  washPath(c, sh, 1, 0.03); c.stroke();
+  c.restore();
+  c.save(); drawFace(c, R, 1.30, 0); c.restore();
+}
+
+function megaDuck(c, R){
+  const body = [[0, R*0.24, R*1.00, R*0.60, 2.1],       // 身
+                [R*0.44, -R*0.50, R*0.44, R*0.44, 5.3]]; // 头
+  const yellow = '#F5C518';
+  c.save();
+  if (canBlur) c.filter = `blur(${(R*0.05).toFixed(1)}px)`;
+  c.globalAlpha = 0.88; c.fillStyle = yellow;
+  washPath(c, body, 1, 0.03); c.fill();
+  c.beginPath();                                         // 上翘的尾巴
+  c.moveTo(-R*0.84, R*0.12); c.lineTo(-R*1.22, -R*0.36); c.lineTo(-R*0.70, -R*0.18);
+  c.closePath(); c.fill();
+  c.restore();
+  c.save();
+  if (canBlur) c.filter = `blur(${(R*0.035).toFixed(1)}px)`;
+  c.globalCompositeOperation = 'multiply'; c.globalAlpha = 0.36;
+  c.strokeStyle = shade(yellow, 0.74); c.lineWidth = R*0.09; c.lineJoin = 'round';
+  washPath(c, body, 1, 0.03); c.stroke();
+  c.restore();
+  c.save();                                              // 嘴
+  if (canBlur) c.filter = `blur(${(R*0.03).toFixed(1)}px)`;
+  c.globalAlpha = 0.92; c.fillStyle = '#E9722C';
+  c.beginPath(); c.ellipse(R*0.92, -R*0.40, R*0.31, R*0.155, 0.13, 0, 7); c.fill();
+  c.restore();
+  c.save();                                              // 眼睛
+  c.fillStyle = INK(); c.strokeStyle = INK();
+  c.lineCap = c.lineJoin = 'round'; c.lineWidth = R*0.045;
+  c.beginPath(); c.arc(R*0.57, -R*0.62, R*0.058, 0, 7); c.fill();
+  c.restore();
+}
+
+// 内容包围盒（不含精灵的空白边距）与它相对原点的偏心。
+// 兔子有长耳朵：内容从 -2.30R 到 +1.25R，而精灵框是对称的 ±2.52R，
+// 下半有 26% 是空的。按精灵框缩放等于把这块空白也算进画面高度。
+// BOOST 是在修正之后再手调的倍率；鸭子给 0.87 是为了抵消修正带来的
+// 约 +15%，保持它原来的观感不变。
+const MEGA_BOX = {
+  bunny: { cw:3.11, ch:3.55, cx:0,      cy:-0.530 },
+  duck:  { cw:2.69, ch:2.20, cx:-0.025, cy:-0.048 },
+};
+const MEGA_BOOST = { bunny: 1.20, duck: 0.87 };
+
+function megaSprite(kind){
+  const key = kind + (night ? 'n' : 'd');     // 脸和眼睛用墨色，昼夜不同
+  let sp = megaCache.get(key);
+  if (sp) return sp;
+  const R = MEGA_R;
+  const padX = kind === 'duck' ? R*1.50 : R*1.95;
+  const padY = kind === 'duck' ? R*1.22 : R*2.52;
+  const box = MEGA_BOX[kind];
+  const cv = document.createElement('canvas');
+  cv.width = Math.ceil(padX*2); cv.height = Math.ceil(padY*2);
+  const c = cv.getContext('2d');
+  c.setTransform(1, 0, 0, 1, padX, padY);
+  if (kind === 'duck') megaDuck(c, R); else megaBunny(c, R);
+  sp = { cv, padX, padY, cw:box.cw*R, ch:box.ch*R, cx:box.cx*R, cy:box.cy*R,
+         boost: MEGA_BOOST[kind] };
+  if (megaCache.size >= 2) megaCache.clear();   // 每张 2–4MB，留两张就够
+  megaCache.set(key, sp);
+  return sp;
+}
+const summon = kind => { mega = { kind, t: 0 }; };
+const sp0 = m => megaSprite(m.kind);
+
 function drawBunny(b){
   const grow = b.dying ? 1 - b.dying : easeOutBack(b.life);
   if (grow <= 0) return;
@@ -1068,6 +1156,31 @@ function frame(now){
     ctx.beginPath(); ctx.moveTo(0, H-1); ctx.lineTo(W, H-1); ctx.stroke();
     ctx.restore();
   }
+  if (mega){                                  // 巨兽：五秒内一路胀大、边大边散
+    mega.t += dt/5.0;
+    if (mega.t >= 1) mega = null;
+    else {
+      // 消散就是继续变大：整个过程只有一条单调的膨胀曲线，
+      // 透明度在 t≈0.18 达到峰值（此时约 0.8 倍画框、看得最清楚），之后一路淡出。
+      const sp = sp0(mega);
+      // 起手就已经接近画框大小，透明度峰值落在 t≈0.28（约 1.2 倍画框），
+      // 之后一路胀到 3.2 倍并淡出 —— 消散就是继续变大。
+      const k  = Math.min(W/sp.cw, H/sp.ch)          // 按内容盒缩放，不含空白边距
+               * 0.94 * sp.boost * (0.85 + 2.60*Math.pow(mega.t, 1.5));
+      // Math.max(0, …)：t 逼近 1 时底数会因浮点误差变成 -2e-16，
+      // pow(负数, 1.4) 得 NaN，globalAlpha = NaN 这一帧就整个画不出来。
+      const al = mega.t < 0.28 ? mega.t/0.28
+                               : Math.pow(Math.max(0, 1 - (mega.t-0.28)/0.72), 1.4);
+      ctx.save();
+      ctx.globalAlpha = al*0.52;
+      ctx.globalCompositeOperation = night ? 'screen' : 'multiply';
+      ctx.translate(W/2, H/2); ctx.scale(k, k);
+      ctx.translate(-sp.cx, -sp.cy);                // 让内容的中心对准画面中心
+      ctx.drawImage(sp.cv, -sp.padX, -sp.padY, sp.padX*2, sp.padY*2);
+      ctx.restore();
+    }
+  }
+
   ctx.save();                                 // 纠缠链接
   ctx.setLineDash([2, 6]); ctx.lineWidth = 1.2; ctx.strokeStyle = INK();
   for (const b of bunnies){
@@ -1453,8 +1566,10 @@ rungs.forEach((r, i) => r.addEventListener('pointerdown', e => {
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
   if (e.key.length === 1){
-    keyBuf = (keyBuf + e.key.toLowerCase()).slice(-6);
+    keyBuf = (keyBuf + e.key.toLowerCase()).slice(-16);
     if (keyBuf.endsWith('night')){ keyBuf = ''; setNight(!night); return; }
+    if (keyBuf.endsWith('megabunny')){ keyBuf = ''; summon('bunny'); return; }
+    if (keyBuf.endsWith('megaduck')){  keyBuf = ''; summon('duck');  return; }
   }
   if (sumOpen_) return;
   const n = '1234567'.indexOf(e.key);
