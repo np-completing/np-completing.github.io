@@ -550,6 +550,9 @@ function spawn(bi, energy = 0.6){
     const old = bunnies.find(b => !b.dying);
     if (old){ unlink(old); old.dying = 1e-6; } else break;
   }
+  // feast 窗口内新蹦出来的也补一份。延迟 0.3 秒等它先弹出来，
+  // 别在冒头的同时啃胡萝卜。
+  if (performance.now() < feastUntil) feed(bunnies[bunnies.length-1], 0.30);
   flash(bi); bumpTally(bi);
   overlay.classList.add('hidden');
 }
@@ -627,7 +630,7 @@ function step(dt){
   for (const b of bunnies){
     if (b.feedT != null){
       b.feedT += dt;
-      b.nib = 1 + 0.055*Math.sin(b.feedT*Math.PI*7);
+      if (b.feedT >= 0) b.nib = 1 + 0.055*Math.sin(b.feedT*Math.PI*7);
       if (b.feedT >= 1 || b.dying){
         b.feedT = null; b.nib = 1;
         if (!b.dying){ b.happy = 1; hearts.push({ b, t:0 }); carrots++; }
@@ -640,6 +643,8 @@ function step(dt){
     hearts[i].t += dt/1.3;
     if (hearts[i].t >= 1 || hearts[i].b.dying) hearts.splice(i,1);
   }
+  stepKing(dt); stepBow(dt); stepCrown(dt);
+  kingFlash *= Math.pow(0.008, dt);
   cOut.textContent = bunnies.filter(b => !b.dying).length;
 }
 
@@ -815,11 +820,14 @@ const hearts = [];
 let carrots = 0;
 
 // 喂一根。正在吃或还开心着就不重复喂。
-function feed(b){
+// delay 用负的 feedT 表示"还没轮到" —— step 和 draw 都跳过负值阶段，
+// 比另开一个待办队列干净。
+function feed(b, delay){
   if (b.dying || b.feedT != null || b.happy > 0) return false;
-  b.feedT = 0;
+  b.feedT = -(delay || 0);
   return true;
 }
+let feastUntil = 0;   // feast 的有效窗口，窗口内新生的兔子也入席
 
 const megaCache = new Map();
 let mega = null;                              // { kind, t }
@@ -902,6 +910,178 @@ function megaSprite(kind){
   return sp;
 }
 const summon = kind => { mega = { kind, t: 0 }; };
+
+let fluke = null;        // { x, y, x0, rot, phase, t }
+let crownFly = null;     // { x, y, to, t }
+const rings = [];        // 落地的金色扩散环
+let kingFlash = 0;
+let crownHold = null, crownT = 0;
+const KING_GOLD = '#E0A020';
+
+// 王冠嵌在两耳之间，坐在身体顶上
+function crownPath(c, R){
+  const w = R*0.72, h = R*0.50, y = -R*1.04;
+  c.beginPath();
+  c.moveTo(-w/2, y);
+  c.lineTo(-w/2, y - h*0.42);
+  c.lineTo(-w*0.24, y - h*0.12);
+  c.lineTo(0, y - h);
+  c.lineTo(w*0.24, y - h*0.12);
+  c.lineTo(w/2, y - h*0.42);
+  c.lineTo(w/2, y);
+  c.closePath();
+}
+// 王冠用正常合成 —— 金色乘到浅紫纸上会发闷，这是这套美术里唯一的例外
+function drawCrown(c, R, glow){
+  c.save();
+  c.shadowColor = 'rgba(224,160,32,.95)';
+  c.shadowBlur = R*1.5*glow;
+  c.fillStyle = KING_GOLD;
+  crownPath(c, R); c.fill(); c.fill();      // 两遍：光晕 + 压实
+  c.shadowBlur = 0;
+  crownPath(c, R); c.fill();
+  c.strokeStyle = INK(); c.lineWidth = Math.max(1, R*0.065); c.lineJoin = 'round';
+  c.stroke();
+  c.restore();
+}
+
+// ④ 王冠先落到场上最小的兔子头上，之后每隔 1.4 秒往大一档传，
+// 直到落在最大的那只身上为止 —— 一条看得见的、沿尺寸下行的传承链。
+function sendCrown(x, y, pool){
+  if (!pool.length) return false;
+  const bi = Math.max(...pool.map(b => b.bi));        // 同批里最小的（档位号最大）
+  const p = pool.filter(b => b.bi === bi);
+  p.sort((a, b) => Math.hypot(a.x-x, a.y-y) - Math.hypot(b.x-x, b.y-y));
+  crownFly = { x, y, to: p[0], t: 0 };
+  return true;
+}
+// 起手：场上最小的一只
+const startCrown = (x, y) => sendCrown(x, y, bunnies.filter(b => !b.dying && !b.crown));
+// 续传：只往比当前更大的（档位号更小的）传，一次跨一档
+const nextCrown  = (x, y, bi) => sendCrown(x, y, bunnies.filter(b => !b.dying && !b.crown && b.bi < bi));
+
+function stepCrown(dt){
+  if (crownFly){
+    crownFly.t += dt/0.8;
+    if (crownFly.to.dying || bunnies.indexOf(crownFly.to) < 0){ crownFly = null; return; }
+    if (crownFly.t >= 1){
+      crownHold = crownFly.to; crownHold.crown = true; crownT = 0; crownFly = null;
+    }
+    return;
+  }
+  if (!crownHold) return;
+  if (crownHold.dying || bunnies.indexOf(crownHold) < 0){
+    const { x, y, bi } = crownHold;
+    crownHold.crown = false; crownHold = null;
+    nextCrown(x, y, bi);                              // 戴冠者出局，立刻续传
+    return;
+  }
+  crownT += dt;
+  if (crownT > 1.4){
+    crownT = 0;
+    if (nextCrown(crownHold.x, crownHold.y, crownHold.bi)){
+      crownHold.crown = false; crownHold = null;      // 已到最大的话就留着不动
+    }
+  }
+}
+
+function summonKing(){
+  const R = unit*BANDS[NB-1].size;
+  fluke = { x: rnd(W*0.30, W*0.70), y: -R*2.2, rot: 0, phase: 'fall', t: 0, sway: rnd(0, 6.28) };
+  crownFly = null;
+}
+
+function stepKing(dt){
+  if (!fluke) return;
+  const B = BANDS[NB-1], R = unit*B.size, footH = R*1.02;
+  fluke.t += dt;
+  fluke.rot = Math.sin(fluke.t*0.9 + fluke.sway)*0.09;
+  if (fluke.phase === 'fall'){
+    fluke.y += (H + R*2.2)/5.0 * dt;                  // 约五秒落到底
+    fluke.x += Math.cos(fluke.t*0.9 + fluke.sway)*R*0.5*dt;
+    if (fluke.y >= H - footH){
+      fluke.y = H - footH; fluke.phase = 'stand'; fluke.t = 0;
+      rings.push({ x: fluke.x, y: H, t: 0 });
+      kingFlash = 1;
+      for (const b of bunnies){                       // ② 全体同弹
+        if (b.dying) continue;
+        // 按各自的满力起跳速度再加两成重新发射。原来的"在现速上加 300"
+        // 对正在上升的兔子几乎看不出来，对第 1 档（起跳 950px/s）更是零头。
+        b.vy = -Math.sqrt(2*b.g*Math.max(b.apex, H*0.28))*1.2;
+        b.sq = 1.40;
+      }
+    }
+  } else if (fluke.phase === 'stand'){
+    if (fluke.t > 1.2){
+      fluke.phase = 'leave'; fluke.t = 0;
+      startCrown(fluke.x, fluke.y);                   // ④ 传给场上最小的一只
+    }
+  } else if (fluke.t >= 1.1) fluke = null;
+
+  for (let i = rings.length-1; i >= 0; i--){
+    rings[i].t += dt/0.75; if (rings[i].t >= 1) rings.splice(i, 1);
+  }
+}
+
+// ① 俯首。加性偏置读不出来 —— 兔子本来就在自转，一个静态倾角会被转动淹没。
+// 所以在他在场期间把自转刹住，再把 b.rot 整体拉向朝他的方向：
+// 全场同时停转、朝同一边倾斜，这才看得出是在行礼。
+// 旋转不参与碰撞也不参与节拍锁定，改它是安全的。
+function stepBow(dt){
+  if (!fluke || fluke.phase === 'leave') return;
+  for (const b of bunnies){
+    if (b.dying) continue;
+    const want = clamp((fluke.x - b.x)*0.0045, -0.50, 0.50);
+    b.vr *= Math.pow(0.01, dt);                       // 刹住自转
+    b.rot += (want - b.rot) * Math.min(1, dt*2.6);
+  }
+}
+
+
+
+function drawKing(){
+  if (kingFlash > 0.01){                              // 全场金闪，给"同弹"一个视觉起因
+    const g = ctx.createLinearGradient(0, H*0.45, 0, H);
+    g.addColorStop(0, 'rgba(224,160,32,0)');
+    g.addColorStop(1, `rgba(224,160,32,${(kingFlash*0.42).toFixed(3)})`);
+    ctx.fillStyle = g; ctx.fillRect(0, H*0.45, W, H*0.55);
+  }
+  for (const r of rings){                             // 落地金环，扩散到整个画面宽度
+    ctx.save();
+    ctx.globalAlpha = (1-r.t)*(1-r.t)*0.7;
+    ctx.strokeStyle = KING_GOLD;
+    ctx.lineWidth = Math.max(1.5, unit*0.14*(1-r.t));
+    ctx.beginPath();
+    ctx.ellipse(r.x, r.y, W*0.06 + r.t*W*0.78, unit*0.2 + r.t*H*0.30, 0, 0, 7);
+    ctx.stroke(); ctx.restore();
+  }
+  if (crownFly){                                      // 飞行中的王冠
+    const p = crownFly.t, to = crownFly.to;
+    const tx = to.x, ty = to.y;
+    const x = crownFly.x + (tx - crownFly.x)*p;
+    const y = crownFly.y + (ty - crownFly.y)*p - Math.sin(p*Math.PI)*unit*1.2;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(Math.sin(p*Math.PI*2)*0.4);
+    drawCrown(ctx, unit*BANDS[NB-1].size, 1.3); ctx.restore();
+  }
+  if (!fluke) return;
+  const B = BANDS[NB-1], R = unit*B.size;
+  const fade = fluke.phase === 'leave' ? Math.max(0, 1 - fluke.t/1.1) : 1;
+  const sp = spriteFor(NB-1, 0);
+  ctx.save();
+  ctx.translate(fluke.x, fluke.y); ctx.rotate(fluke.rot);
+  ctx.globalAlpha = fade;
+  ctx.globalCompositeOperation = night ? 'screen' : 'multiply';
+  ctx.drawImage(sp.cv, -sp.padX, -sp.padY, sp.padX*2, sp.padY*2);
+  drawFace(ctx, R, B.fat, 0);
+  ctx.restore();
+  if (!crownFly){
+    ctx.save();
+    ctx.translate(fluke.x, fluke.y); ctx.rotate(fluke.rot);
+    ctx.globalAlpha = fade;
+    drawCrown(ctx, R, 1 + 0.25*Math.sin(fluke.t*3));
+    ctx.restore();
+  }
+}
 
 // 双子座主星：[赤经(小时), 赤纬(度), 视星等, 标注]
 const GEM = {
@@ -986,13 +1166,13 @@ function drawBunny(b){
 
   ctx.save();
   ctx.translate(b.x, b.y);
-  ctx.rotate(b.rot);
+  ctx.rotate(b.rot + (b.bow || 0));
   ctx.scale(sq*grow*(b.nib || 1), grow/sq*(2 - (b.nib || 1)));
   ctx.globalAlpha = b.dying ? 1 - b.dying : 1;
   ctx.globalCompositeOperation = night ? 'screen' : 'multiply';
   ctx.drawImage(sp.cv, -sp.padX, -sp.padY, sp.padX*2, sp.padY*2);
   drawFace(ctx, b.R*grow, b.fat, b.happy || 0);
-  if (b.feedT != null){                       // 三口吃完
+  if (b.feedT != null && b.feedT > 0){        // 三口吃完
     const step = Math.min(2, Math.floor(b.feedT*3));
     const sz = b.R*0.92*(1 - step*0.30);
     const cs = carrot();
@@ -1003,6 +1183,12 @@ function drawBunny(b){
   }
   ctx.restore();
 
+  if (b.crown && !b.dying){
+    ctx.save();
+    ctx.translate(b.x, b.y); ctx.rotate(b.rot + (b.bow || 0));
+    drawCrown(ctx, b.R*grow, 1);
+    ctx.restore();
+  }
   // 纠缠光环是动态的，不能烘进精灵 —— 链接随时可能被点断
   if (b.twin && !b.dying && !b.twin.dying){
     const R = b.R*grow, bw = R*b.fat;
@@ -1283,6 +1469,7 @@ function frame(now){
     ctx.fill();
     ctx.restore();
   }
+  drawKing();
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
@@ -1649,6 +1836,11 @@ addEventListener('keydown', e => {
     if (keyBuf.endsWith('megabunny')){ keyBuf = ''; summon('bunny'); return; }
     if (keyBuf.endsWith('megaduck')){  keyBuf = ''; summon('duck');  return; }
     if (keyBuf.endsWith('gemini')){    keyBuf = ''; gem = { t:0 };    return; }
+    if (keyBuf.endsWith('feast')){     keyBuf = '';
+      feastUntil = performance.now() + 2000;
+      bunnies.filter(b => !b.dying).forEach((b, i) => feed(b, i*0.13));   // 依次开吃，成涟漪
+      return; }
+    if (keyBuf.endsWith('kingbun') || keyBuf.endsWith('fluke')){ keyBuf = ''; summonKing(); return; }
   }
   if (sumOpen_) return;
   const n = '1234567'.indexOf(e.key);
