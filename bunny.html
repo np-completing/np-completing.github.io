@@ -893,10 +893,11 @@ function megaDuck(c, R){
 // 约 +15%，保持它原来的观感不变。
 const MEGA_BOX = {
   pika:  { cw:3.076, ch:2.000, cx:0,      cy:0      },   // 内容填满整张精灵，无留白
+  pika2: { cw:2.68,  ch:2.40,  cx:0.020,  cy:0.020  },
   bunny: { cw:3.11, ch:3.55, cx:0,      cy:-0.530 },
   duck:  { cw:2.69, ch:2.20, cx:-0.025, cy:-0.048 },
 };
-const MEGA_BOOST = { bunny: 1.20, duck: 0.87, pika: 1.15 };
+const MEGA_BOOST = { bunny: 1.20, duck: 0.87, pika: 1.15, pika2: 1.10 };
 // 每种巨兽自己的时间曲线。
 //   dur 总时长 · s0 起始倍率 · s1 增量 · gam 膨胀指数
 //   a0 淡入结束 · a1 淡出开始（两者相等 = 没有满亮的停留）· fade 淡出指数
@@ -907,7 +908,66 @@ const MEGA_CURVE = {
   // 写实图的细节比另外两只多得多，放大之后不协调 —— 所以淡出要陡（fade 3.2），
   // 在它长到 2 倍画框以前就基本消失。保留满亮的停留段，长大的过程照样看得完整。
   pika:  { dur:6.5, s0:0.18, s1:3.10, gam:1.50, a0:0.18, a1:0.50, fade:3.20 },
+  // 简笔画版细节少，可以放到更大、淡得更慢 —— 和另外两只简笔画一族同调
+  pika2: { dur:6.5, s0:0.20, s1:3.00, gam:1.50, a0:0.18, a1:0.46, fade:1.60 },
 };
+
+// 简笔画版鼠兔，画法和 megaDuck 一致：先整体描湿边、再用填充盖掉内部分界，
+// 这样重叠的子形状会连成一个团（用一个椭圆去近似并集是不成立的，试过）。
+// 辨识点：圆胖、无尾、圆耳、短口鼻 —— 耳朵圆的才是鼠兔，长的就成兔子了。
+function megaPika(c, R){
+  const tan = '#D4AE7C';
+  const ears = [[R*0.24,-R*0.62,R*0.21,R*0.23,7.7], [R*0.70,-R*0.68,R*0.19,R*0.21,3.3]];
+  const core = [[-R*0.14,R*0.16,R*0.86,R*0.62,2.1], [R*0.52,-R*0.10,R*0.56,R*0.52,5.3],
+                [R*0.16,R*0.02,R*0.52,R*0.50,9.1]];   // 第三个是中段过渡，填掉脖子的凹口
+  // 脚心落在身体底缘「下方」0.05R —— 上一版压进去 0.04R，只剩 0.045R 露在外面，
+  // 还不到湿边描边半宽（0.055R）的一倍，整个被描边吃掉了。
+  // 现在露出 0.17R，是描边的 3.1 倍；脚顶仍埋进身体 0.07R，不会脱开。
+  const btm = x => {
+    let b = -9;
+    for (const [cx, cy, rx, ry] of core){
+      const d = 1 - Math.pow((x-cx)/rx, 2);
+      if (d > 0) b = Math.max(b, cy + ry*Math.sqrt(d));
+    }
+    return b;
+  };
+  const feet = [-0.58, -0.20, 0.18, 0.48].map((f, i) =>
+    [R*f, btm(R*f) + R*0.05, R*0.17, R*0.12, 21 + i*4]);
+  const all = ears.concat(core, feet);   // 脚一起参与描边+填充，才有自己的轮廓
+  c.save();                                            // 湿边（含内部，稍后被填充盖住）
+  if (canBlur) c.filter = `blur(${(R*0.045).toFixed(1)}px)`;
+  c.globalCompositeOperation = 'multiply'; c.globalAlpha = 0.42;
+  c.strokeStyle = shade(tan, 0.74); c.lineWidth = R*0.11; c.lineJoin = 'round';
+  washPath(c, all, 1, 0.03); c.stroke();
+  c.restore();
+  c.save();
+  if (canBlur) c.filter = `blur(${(R*0.035).toFixed(1)}px)`;
+  c.globalAlpha = 0.90; c.fillStyle = tan;
+  washPath(c, all, 1, 0.03); c.fill();
+  c.restore();
+  c.save();                                            // 耳内
+  if (canBlur) c.filter = `blur(${(R*0.03).toFixed(1)}px)`;
+  c.globalAlpha = 0.62; c.fillStyle = '#ECD4BE';
+  for (const [ex, ey, rx, ry] of ears){
+    c.beginPath(); c.ellipse(ex, ey + R*0.01, rx*0.48, ry*0.50, 0, 0, 7); c.fill();
+  }
+  c.restore();
+  c.save();                                            // 眼、鼻、胡须
+  c.fillStyle = INK(); c.strokeStyle = INK();
+  c.lineCap = 'round'; c.lineWidth = R*0.016;
+  c.beginPath(); c.arc(R*0.66, -R*0.26, R*0.066, 0, 7); c.fill();
+  c.beginPath(); c.ellipse(R*1.04, -R*0.02, R*0.05, R*0.035, 0, 0, 7); c.fill();
+  c.globalAlpha = 0.6;
+  // 两边都要 —— 原来只画了朝右的三根，看起来像单边胡子。
+  // 朝左那三根短一些、更贴脸，因为它们是绕到另一侧去的。
+  for (let k = -1; k <= 1; k++){
+    c.beginPath();
+    c.moveTo(R*1.02, -R*0.005); c.lineTo(R*1.26, -R*0.005 + k*R*0.14); c.stroke();
+    c.beginPath();
+    c.moveTo(R*1.00, R*0.005); c.lineTo(R*0.80, R*0.02 + k*R*0.11); c.stroke();
+  }
+  c.restore();
+}
 
 function megaSprite(kind){
   const key = kind + (night ? 'n' : 'd');     // 脸和眼睛用墨色，昼夜不同
@@ -915,8 +975,10 @@ function megaSprite(kind){
   if (sp) return sp;
   const R = MEGA_R;
   if (kind === 'pika' && !pika2OK) return null;      // 图还没到，这一帧先不画
-  const padX = kind === 'pika' ? R*1.538 : kind === 'duck' ? R*1.50 : R*1.95;
-  const padY = kind === 'pika' ? R*1.000 : kind === 'duck' ? R*1.22 : R*2.52;
+  const padX = kind === 'pika' ? R*1.538 : kind === 'pika2' ? R*1.34
+             : kind === 'duck' ? R*1.50 : R*1.95;
+  const padY = kind === 'pika' ? R*1.000 : kind === 'pika2' ? R*1.20
+             : kind === 'duck' ? R*1.22 : R*2.52;
   const box = MEGA_BOX[kind];
   const SS = kind === 'pika' ? 2 : 1;                // 照片上采样 2 倍，内部按 2× 渲染
   const cv = document.createElement('canvas');
@@ -924,6 +986,7 @@ function megaSprite(kind){
   const c = cv.getContext('2d');
   c.setTransform(SS, 0, 0, SS, padX*SS, padY*SS);
   if (kind === 'pika') c.drawImage(PIKA2, -padX, -padY, padX*2, padY*2);
+  else if (kind === 'pika2') megaPika(c, R);
   else if (kind === 'duck') megaDuck(c, R); else megaBunny(c, R);
   sp = { cv, padX, padY, cw:box.cw*R, ch:box.ch*R, cx:box.cx*R, cy:box.cy*R,
          boost: MEGA_BOOST[kind] };
@@ -2034,7 +2097,8 @@ addEventListener('keydown', e => {
     if (keyBuf.endsWith('night')){ keyBuf = ''; setNight(!night); return; }
     if (keyBuf.endsWith('megabunny')){ keyBuf = ''; summon('bunny'); return; }
     if (keyBuf.endsWith('megaduck')){  keyBuf = ''; summon('duck');  return; }
-    if (keyBuf.endsWith('megapika')){  keyBuf = ''; summon('pika');  return; }
+    if (keyBuf.endsWith('megapika')){ keyBuf = ''; summon('pika2'); return; }  // 简笔画
+    if (keyBuf.endsWith('pika2')){    keyBuf = ''; summon('pika');  return; }  // 写实图
     if (keyBuf.endsWith('gemini')){    keyBuf = ''; gem = { t:0 };    return; }
     if (keyBuf.endsWith('feast')){     keyBuf = '';
       feastUntil = performance.now() + 2000;
